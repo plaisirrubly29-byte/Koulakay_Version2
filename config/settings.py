@@ -495,7 +495,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 PHONENUMBER_DEFAULT_FORMAT = "INTERNATIONAL"
 
 THINKIFIC = {
-    'AUTH_TOKEN': os.getenv('THINKIFIC_SECRET_KEY', 'c1699f4b4498b1c1fefd7b86604f9e68'),
+    'AUTH_TOKEN': os.getenv('THINKIFIC_SECRET_KEY', ''),
     'SITE_ID': os.getenv('SITE_ID', 'koulakay'),
     # Clé utilisée pour valider les signatures HMAC des webhooks Thinkific
     # À configurer dans Thinkific → Settings → Webhooks → Secret
@@ -505,7 +505,7 @@ THINKIFIC = {
 PLOPPLOP = {
     'CLIENT_ID': os.getenv('PLOPPLOP_CLIENT_ID', ''),
     'BASE_URL': 'https://plopplop.solutionip.app',
-    'RETURN_URL': os.getenv('PLOPPLOP_RETURN_URL', 'https://koulakay.devfundme.online/payment/retour/'),
+    'RETURN_URL': os.getenv('PLOPPLOP_RETURN_URL', 'https://koulakay.ht/payment/retour/'),
 }
 
 STRIPE = {
