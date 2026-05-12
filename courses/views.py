@@ -357,95 +357,74 @@ def mon_apprentissage(request):
         except (ValueError, AttributeError):
             return val
 
-    # ── 1 appel : tous les produits pour construire la map prix ──
-    price_map = {}  # course_id → price (float)
+    # ── 1 appel : tous les cours → map id → data (évite N+1) ──
+    course_map = {}  # course_id → {name, slug, banner_image_url, description}
     try:
-        product_items = thinkific.products.list(limit=100).get('items', [])
-        for p in product_items:
+        for c in thinkific.courses.list(limit=100).get('items', []):
+            course_map[c['id']] = c
+    except Exception:
+        pass
+
+    # ── 1 appel : tous les produits → map prix ──
+    price_map = {}
+    try:
+        for p in thinkific.products.list(limit=100).get('items', []):
             cid = p.get('productable_id')
             if cid and p.get('price') is not None:
                 price_map[cid] = float(p['price'])
     except Exception:
         pass
 
-    # ── Tentative : 1 seul appel API Thinkific (enrollments) ──
+    # ── Enrollments Thinkific ──
     if thinkific_user_id:
         try:
             response = thinkific.enrollments.list(user_id=thinkific_user_id, limit=100)
             for item in response.get('items', []):
                 course_info = item.get('course') or {}
                 course_id   = item.get('course_id') or course_info.get('id')
-                slug        = course_info.get('slug', '')
+                if not course_id:
+                    continue
+                # Enrichissement depuis la course_map (sans appel supplémentaire)
+                full        = course_map.get(course_id, {})
+                slug        = full.get('slug') or course_info.get('slug', '')
+                expiry      = _parse_date(item.get('expiry_date'))
                 cours_inscrits.append({
                     'id':                   course_id,
-                    'name':                 course_info.get('name', f'Cours #{course_id}'),
+                    'name':                 full.get('name') or course_info.get('name', f'Cours #{course_id}'),
                     'slug':                 slug,
-                    'banner_image_url':     None,
-                    'description':          '',
+                    'banner_image_url':     full.get('banner_image_url') or full.get('course_card_image_url'),
+                    'description':          full.get('description', ''),
                     'price':                price_map.get(course_id),
                     'activated_at':         _parse_date(item.get('activated_at')),
-                    'expiry_date':          _parse_date(item.get('expiry_date')),
+                    'expiry_date':          expiry,
+                    'lifetime':             expiry is None,
                     'percentage_completed': item.get('percentage_completed', 0),
-                    'thinkific_url': (
-                        f"https://{site_id}.thinkific.com/products/courses/{slug}"
-                        if slug else '#'
-                    ),
                 })
         except Exception as e:
             print(f"[mon_apprentissage] Erreur API Thinkific: {e}")
 
-    # ── Enrichissement : récupérer banner_image_url + description pour chaque cours ──
-    if cours_inscrits:
-        for c in cours_inscrits:
-            cid = c.get('id')
-            if not cid:
-                continue
-            try:
-                full = thinkific.courses.retrieve_course(id=cid)
-                c['banner_image_url'] = (
-                    full.get('banner_image_url') or full.get('course_card_image_url')
-                )
-                c['description'] = full.get('description', '')
-                if full.get('name'):
-                    c['name'] = full['name']
-                if not c['slug']:
-                    c['slug'] = full.get('slug', '')
-                    if c['slug']:
-                        c['thinkific_url'] = f"https://{site_id}.thinkific.com/products/courses/{c['slug']}"
-            except Exception:
-                pass
-
-    # ── Fallback : DB locale ──
+    # ── Fallback : DB locale (si Thinkific indisponible ou pas de thinkific_user_id) ──
     if not cours_inscrits:
         for enrollment in Enrollment.objects.filter(user=request.user).order_by('-activated_at'):
-            slug = ''
-            name = f'Cours #{enrollment.course_id}'
-            banner = None
-            try:
-                cd   = thinkific.courses.retrieve_course(id=enrollment.course_id)
-                slug = cd.get('slug', '')
-                name = cd.get('name', name)
-                banner = cd.get('banner_image_url')
-            except Exception:
-                pass
+            full  = course_map.get(enrollment.course_id, {})
+            slug  = full.get('slug', '')
             cours_inscrits.append({
                 'id':                   enrollment.course_id,
-                'name':                 name,
+                'name':                 full.get('name', f'Cours #{enrollment.course_id}'),
                 'slug':                 slug,
-                'banner_image_url':     banner,
+                'banner_image_url':     full.get('banner_image_url') or full.get('course_card_image_url'),
+                'description':          full.get('description', ''),
                 'price':                price_map.get(enrollment.course_id),
                 'activated_at':         enrollment.activated_at,
                 'expiry_date':          enrollment.expiry_date,
+                'lifetime':             False,
                 'percentage_completed': 0,
-                'thinkific_url': (
-                    f"https://{site_id}.thinkific.com/products/courses/{slug}"
-                    if slug else '#'
-                ),
             })
 
     apply_course_translations(cours_inscrits)
     return render(request, 'pages/mon_apprentissage.html', {
-        'cours_inscrits': cours_inscrits,
+        'cours_inscrits':  cours_inscrits,
+        'site_currency':   SiteConfig.get().currency,
     })
 
 

@@ -44,14 +44,18 @@
                             <i class="fa fa-book-open text-5xl text-brand-300"></i>
                         </div>
                     {% endif %}
-                    <!-- Badge accès actif -->
-                    {% if course.expiry_date %}
+                    <!-- Badge accès actif (toujours affiché) -->
                     <div class="absolute top-2 right-2">
+                        {% if course.lifetime %}
+                        <span class="text-xs bg-brand-700 text-white px-2 py-0.5 rounded-full font-medium shadow">
+                            {% trans "Accès à vie" %}
+                        </span>
+                        {% else %}
                         <span class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-medium shadow">
                             {% trans "Actif" %}
                         </span>
+                        {% endif %}
                     </div>
-                    {% endif %}
                     <!-- Badge progression (non vide) -->
                     {% if course.percentage_completed and course.percentage_completed > 0 %}
                     <div class="absolute bottom-2 left-2">
@@ -108,12 +112,14 @@
                             <span>{% trans "Inscrit le" %} {{ course.activated_at|date:"d/m/Y" }}</span>
                         </div>
                         {% endif %}
-                        {% if course.expiry_date %}
                         <div class="flex items-center gap-1.5">
                             <i class="fa fa-clock text-brand-400"></i>
+                            {% if course.lifetime %}
+                            <span class="text-brand-600 font-medium">{% trans "Accès à vie" %}</span>
+                            {% elif course.expiry_date %}
                             <span>{% trans "Accès jusqu'au" %} {{ course.expiry_date|date:"d/m/Y" }}</span>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
 
                     <!-- Bouton accès -->
