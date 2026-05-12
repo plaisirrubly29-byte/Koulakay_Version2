@@ -186,7 +186,7 @@
                     <!-- Actions -->
                     {% if request.user.is_authenticated %}
                         {% if course.enroll %}
-                        <a href="{% url 'thinkific_sso' %}?return_to=/courses/{{ course.slug }}"
+                        <a href="{% url 'thinkific_sso' %}?return_to=/products/courses/{{ course.slug }}"
                            class="block w-full mb-3 px-5 py-3 bg-green-600 hover:bg-green-700 text-white text-center font-bold rounded-xl transition">
                             <span class="material-symbols-outlined align-middle mr-1" style="font-size:18px;">play_circle</span>
                             {% trans "Accéder au cours" %}

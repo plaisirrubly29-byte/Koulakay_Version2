@@ -180,7 +180,7 @@
 
                         <div class="flex gap-2">
                             {% if c.enroll %}
-                            <a href="{% url 'thinkific_sso' %}?return_to=/courses/{{ c.slug }}"
+                            <a href="{% url 'thinkific_sso' %}?return_to=/products/courses/{{ c.slug }}"
                                class="flex-1 text-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
                                 {% trans "Continuer" %}
                             </a>
