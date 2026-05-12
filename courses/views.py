@@ -19,6 +19,52 @@ from pages.models import SiteConfig
 thinkific = ThinkificExtend(settings.THINKIFIC['AUTH_TOKEN'], settings.THINKIFIC['SITE_ID'])
 
 
+def _sync_user_enrollments(user, request=None):
+    """
+    Lit les enrollments Thinkific de l'utilisateur et crée les entrées manquantes
+    en DB locale. Source de vérité = Thinkific.
+    Throttle : 1 sync par heure par session pour limiter les appels API.
+    """
+    if not getattr(user, 'is_authenticated', False):
+        return
+    thinkific_user_id = getattr(user, 'thinkific_user_id', None)
+    if not thinkific_user_id:
+        return
+
+    # Throttle via session : on ne re-sync pas si déjà fait dans la dernière heure
+    if request is not None:
+        import time
+        last_sync = request.session.get('enrollment_sync_ts', 0)
+        if time.time() - last_sync < 3600:
+            return
+        request.session['enrollment_sync_ts'] = int(time.time())
+
+    try:
+        from django.utils import timezone as dj_timezone
+        response = thinkific.enrollments.list(user_id=thinkific_user_id, limit=100)
+        for item in response.get('items', []):
+            course_id = item.get('course_id')
+            if not course_id:
+                continue
+            raw_date = item.get('activated_at')
+            try:
+                activated_at = datetime.fromisoformat(raw_date.replace('Z', '+00:00')) if raw_date else dj_timezone.now()
+            except Exception:
+                activated_at = dj_timezone.now()
+            expiry_date = activated_at.replace(year=activated_at.year + 10)
+            Enrollment.objects.get_or_create(
+                user=user,
+                course_id=course_id,
+                defaults={
+                    'thinkific_user_id': thinkific_user_id,
+                    'activated_at': activated_at,
+                    'expiry_date': expiry_date,
+                },
+            )
+    except Exception as e:
+        print(f"[sync_enrollments] {user.email}: {e}")
+
+
 def apply_course_translations(courses, lang=None):
     """
     Remplace name/description des cours Thinkific par les traductions locales
@@ -93,7 +139,10 @@ def course_enrollment_step1(request, course_id):
             messages.error(request, _("Impossible de trouver votre profil Thinkific."))
             return redirect('course_details', course_id=course_id)
         
-        # Vérifier si déjà inscrit
+        # Sync Thinkific → DB locale avant de vérifier le doublon
+        _sync_user_enrollments(request.user, request)
+
+        # Vérifier si déjà inscrit (DB locale = vérité après sync)
         if Enrollment.objects.filter(user=request.user, course_id=course_id).exists():
             messages.info(request, _("Vous êtes déjà inscrit à ce cours."))
             return redirect('course_details', course_id=course_id)
@@ -515,6 +564,10 @@ def home(request):
 
 def courses(request):
     """Liste des cours — tous chargés en une passe, filtrage côté client."""
+    # Sync Thinkific → DB locale (throttlé à 1x/heure par session)
+    if request.user.is_authenticated:
+        _sync_user_enrollments(request.user, request)
+
     try:
         courses_items = thinkific.courses.list(limit=100).get('items', [])
     except Exception:
@@ -586,9 +639,10 @@ def course_details(request, course_id):
     except Exception as e:
         print(f"Erreur récupération prix: {e}")
 
-    # Vérifier l'inscription
+    # Vérifier l'inscription (sync Thinkific → DB locale d'abord)
     course['enroll'] = False
     if request.user.is_authenticated:
+        _sync_user_enrollments(request.user, request)
         course['enroll'] = Enrollment.objects.filter(
             user=request.user,
             course_id=course_id
