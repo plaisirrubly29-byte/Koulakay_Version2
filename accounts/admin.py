@@ -34,9 +34,9 @@ class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
         # Lier automatiquement au compte Thinkific si pas encore fait
         if not obj.thinkific_user_id:
             from accounts.views import get_thinkific_user_by_email
-            from thinkific import Thinkific
+            from courses.monkey_patch.patch_thinkific import ThinkificExtend
             from django.conf import settings
-            tk = Thinkific(settings.THINKIFIC['AUTH_TOKEN'], settings.THINKIFIC['SITE_ID'])
+            tk = ThinkificExtend(settings.THINKIFIC['AUTH_TOKEN'], settings.THINKIFIC['SITE_ID'])
             # 1. Chercher s'il existe déjà dans Thinkific
             thinkific_user = get_thinkific_user_by_email(obj.email)
             if not thinkific_user:

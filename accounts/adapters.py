@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 
 import requests
-from thinkific import Thinkific
+from courses.monkey_patch.patch_thinkific import ThinkificExtend as Thinkific
 
 
 def _generate_password(email: str) -> str:

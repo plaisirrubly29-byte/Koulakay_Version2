@@ -3,7 +3,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib import messages
 from django.conf import settings
 from allauth.account.views import SignupView, LoginView
-from thinkific import Thinkific
+from courses.monkey_patch.patch_thinkific import ThinkificExtend as Thinkific
 from django.contrib.auth.decorators import login_required
 from django.views import View
 from django.utils.translation import gettext_lazy as _

@@ -18,7 +18,7 @@ from courses.models import Enrollment
 from .models import Transaction, Payment
 from .plopplop_service import PlopPlopService
 from .email_service import send_enrollment_confirmation
-from thinkific import Thinkific
+from courses.monkey_patch.patch_thinkific import ThinkificExtend as Thinkific
 
 User = get_user_model()
 thinkific = Thinkific(settings.THINKIFIC['AUTH_TOKEN'], settings.THINKIFIC['SITE_ID'])
