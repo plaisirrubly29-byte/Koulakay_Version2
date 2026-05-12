@@ -514,116 +514,49 @@ def home(request):
 
 
 def courses(request):
-    """Liste des cours avec pagination et filtres"""
-    page_number = request.GET.get("page", 1)
-    limit = 12  # Augmenté pour une meilleure grille
-    
-    # Cours populaires
-    top_course_ids_queryset = Enrollment.objects.values('course_id') \
-                                             .annotate(num_enrollments=Count('course_id')) \
-                                             .order_by('-num_enrollments')[:5]
-    
-    top_course_ids = [item['course_id'] for item in top_course_ids_queryset]
-    popular_courses = []
-    
-    for course_id in top_course_ids:
-        try:
-            course_data = thinkific.courses.retrieve_course(id=course_id)
-            enroll_count = next((item['num_enrollments'] for item in top_course_ids_queryset if item['course_id'] == course_id), 0)
-            course_data['enrollment_count'] = enroll_count
-            popular_courses.append(course_data)
-        except Exception as e:
-            print(f"Erreur cours populaire {course_id}: {e}")
-            continue
-
-    # Cours paginés
+    """Liste des cours — tous chargés en une passe, filtrage côté client."""
     try:
-        courses_response = thinkific.courses.list(page=page_number, limit=limit)
-        courses_items = courses_response.get('items', [])
-        pagination_meta = courses_response.get('meta', {}).get('pagination', {})
+        courses_items = thinkific.courses.list(limit=100).get('items', [])
     except Exception:
         courses_items = []
-        pagination_meta = {}
-        
-    # Produits et catégories
+
     try:
-        product_response = thinkific.products.list(limit=100)
-        product_items = product_response.get('items', [])
+        product_items = thinkific.products.list(limit=100).get('items', [])
     except Exception:
         product_items = []
 
-    try:
-        category_response = thinkific.collections.list_collections()
-        # Exclude the Thinkific "All Products" default collection — duplicates the "Tout" button
-        _all_names = {'all products', 'tous les produits', 'all', 'todo', 'todos los productos'}
-        category_items = [
-            c for c in category_response.get('items', [])
-            if c.get('name', '').strip().lower() not in _all_names
-        ]
-    except Exception:
-        category_items = []
-    
-    # 1 seule requête pour les cours déjà inscrits
     enrolled_ids = set()
     if request.user.is_authenticated:
         enrolled_ids = set(
             Enrollment.objects.filter(user=request.user).values_list('course_id', flat=True)
         )
 
-    def process_course_list(course_list, product_items):
-        for c in course_list:
-            c['price'] = None
-            if c.get('product_id') is not None:
-                for p in product_items:
-                    if p.get('productable_id') == c['id'] and p.get('price') is not None:
-                        c['price'] = p['price']
-                        break
-            c['enroll'] = c.get('id') in enrolled_ids
-        return course_list
+    popular_counts = {
+        item['course_id']: item['num']
+        for item in Enrollment.objects.values('course_id')
+                                      .annotate(num=Count('course_id'))
+                                      .order_by('-num')[:10]
+    }
 
-    courses_items   = process_course_list(courses_items, product_items)
-    popular_courses = process_course_list(popular_courses, product_items)
+    price_map = {
+        p['productable_id']: p['price']
+        for p in product_items
+        if p.get('productable_id') and p.get('price') is not None
+    }
+
+    for c in courses_items:
+        cid = c.get('id')
+        price = price_map.get(cid)
+        c['price'] = price
+        c['is_free'] = price is None or float(price) == 0
+        c['enroll'] = cid in enrolled_ids
+        c['enrollment_count'] = popular_counts.get(cid, 0)
+
     apply_course_translations(courses_items)
-    apply_course_translations(popular_courses)
-    
-    # Gestion des filtres POST
-    if request.method == "POST":
-        q = request.POST.get('q', None)
-        product_ids = request.POST.get('products', None)
-        
-        if product_ids:
-            id_list = product_ids.strip("[]").split(", ")
-            try:
-                id_list = [int(id) for id in id_list]
-            except ValueError:
-                id_list = []
-            
-            matched_items = [item for item in courses_items if item.get('product_id') in id_list]
-            return render(request, 'pages/courses.html', {
-                'courses': matched_items,
-                'category_items': category_items,
-                'popular_courses': popular_courses
-            })
-        
-        if q is None:
-            return render(request, 'pages/courses.html', {
-                'category_items': category_items,
-                'popular_courses': popular_courses
-            })
-        
-        list_found = [c for c in courses_items if q.lower() in c.get('name', '').lower()]
-        return render(request, 'pages/courses.html', {
-            'courses': list_found,
-            'category_items': category_items,
-            'q': q,
-            'popular_courses': popular_courses
-        })
-    
+
     context = {
         'courses': courses_items,
-        'category_items': category_items,
-        'popular_courses': popular_courses,
-        'pagination_meta': pagination_meta, 
+        'site_currency': SiteConfig.get().currency,
     }
     
     return render(request, 'pages/courses.html', context)

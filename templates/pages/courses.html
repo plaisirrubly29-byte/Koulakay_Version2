@@ -7,24 +7,31 @@
 {% block head %}
 <style>
     .course-card {
-        transition: transform 0.28s cubic-bezier(.34,1.56,.64,1), box-shadow 0.28s;
+        transition: transform 0.26s cubic-bezier(.34,1.56,.64,1), box-shadow 0.26s, opacity 0.2s;
     }
     .course-card:hover {
         transform: translateY(-6px);
         box-shadow: 0 20px 40px rgba(124,61,14,0.18);
     }
-    .cat-pill { transition: background 0.2s, color 0.2s, border-color 0.2s; }
-    .cat-pill:hover { background: #C4853A; color: white; border-color: #C4853A; }
-    .cat-pill.active { background: #7C3D0E; color: white; border-color: #7C3D0E; }
+    .course-card.hidden-card {
+        display: none;
+    }
+    .filter-pill {
+        transition: background 0.18s, color 0.18s, border-color 0.18s, box-shadow 0.18s;
+        cursor: pointer;
+    }
+    .filter-pill:hover { background: #C4853A; color: white; border-color: #C4853A; }
+    .filter-pill.active  { background: #7C3D0E; color: white; border-color: #7C3D0E; box-shadow: 0 2px 8px rgba(124,61,14,0.25); }
     .price-badge { background: rgba(30,10,0,0.72); backdrop-filter: blur(4px); }
+    #search-input:focus { outline: none; box-shadow: 0 0 0 3px rgba(196,133,58,0.35); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="min-h-screen" style="background:#FBF7F4;">
 
-    <!-- ── Hero Catalogue ── -->
-    <section style="background: linear-gradient(135deg, #3D1C04 0%, #7C3D0E 60%, #9B5116 100%);" class="py-14 mb-8">
+    <!-- ── Hero ── -->
+    <section style="background: linear-gradient(135deg, #3D1C04 0%, #7C3D0E 60%, #9B5116 100%);" class="py-14 mb-0">
         <div class="max-w-7xl mx-auto px-4 text-center" data-aos="fade-up" data-aos-duration="700">
             <span class="inline-block px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white/15 border border-white/25 text-amber-200 mb-4">
                 {% trans "Catalogue" %}
@@ -32,62 +39,76 @@
             <h1 class="text-4xl md:text-5xl font-bold text-white mb-3">{% trans "Catalogue de Cours" %}</h1>
             <p class="text-lg text-amber-100 mb-7">{% trans "Des formations expertes pour votre réussite professionnelle" %}</p>
 
-            <!-- Recherche -->
-            <form method="POST" action="" class="max-w-xl mx-auto">
-                {% csrf_token %}
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-brand-500 pointer-events-none">search</span>
-                    <input type="text" name="q" value="{{ q|default:'' }}"
-                           placeholder="{% trans 'Rechercher un cours...' %}"
-                           class="w-full h-12 pl-12 pr-4 rounded-xl border-0 bg-white/95 text-brand-900 placeholder-brand-400
-                                  focus:ring-2 focus:ring-brand-400 focus:outline-none shadow-lg text-sm">
-                </div>
-            </form>
+            <!-- Barre de recherche -->
+            <div class="max-w-xl mx-auto relative">
+                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-brand-500 pointer-events-none select-none">search</span>
+                <input id="search-input" type="text" autocomplete="off"
+                       placeholder="{% trans 'Rechercher un cours...' %}"
+                       class="w-full h-12 pl-12 pr-10 rounded-xl border-0 bg-white/95 text-brand-900 placeholder-brand-400 shadow-lg text-sm transition">
+                <button id="search-clear" class="absolute right-3 top-1/2 -translate-y-1/2 text-brand-300 hover:text-brand-600 hidden" title="{% trans 'Effacer' %}">
+                    <span class="material-symbols-outlined" style="font-size:20px;">close</span>
+                </button>
+            </div>
         </div>
     </section>
 
-    <main class="max-w-7xl mx-auto px-4 pb-16">
+    <!-- ── Barre de filtres (sticky) ── -->
+    <div class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-brand-100 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+            <!-- Pills -->
+            <div class="flex gap-2 flex-wrap">
+                <button class="filter-pill active px-4 py-1.5 rounded-full text-sm font-semibold border border-brand-300 text-brand-700 bg-white"
+                        data-filter="all">{% trans "Tout" %}</button>
+                <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-semibold border border-brand-300 text-brand-700 bg-white"
+                        data-filter="free">{% trans "Gratuit" %}</button>
+                <button class="filter-pill px-4 py-1.5 rounded-full text-sm font-semibold border border-brand-300 text-brand-700 bg-white"
+                        data-filter="paid">{% trans "Payant" %}</button>
+            </div>
 
-        <!-- ── Catégories ── -->
-        <div class="mb-8 flex gap-2 overflow-x-auto pb-2" data-aos="fade-up" data-aos-duration="500">
-            <a href="{% url 'courses' %}"
-               class="cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-semibold border border-brand-600 text-brand-600 active">
-                {% trans "Tout" %}
-            </a>
-            <form method="POST" action="{% url 'courses' %}" class="flex gap-2">
-                {% csrf_token %}
-                {% for c in category_items %}
-                <button name="products" value="{{ c.product_ids }}" type="submit"
-                        class="cat-pill shrink-0 px-4 py-2 rounded-full text-sm font-medium border border-brand-300 text-brand-700 bg-white">
-                    {{ c.name }}
-                </button>
-                {% endfor %}
-            </form>
+            <!-- Séparateur -->
+            <div class="hidden sm:block w-px h-6 bg-brand-200 mx-1"></div>
+
+            <!-- Tri -->
+            <div class="flex items-center gap-2 ml-auto">
+                <span class="text-xs text-brand-400 hidden sm:inline">{% trans "Trier" %}</span>
+                <select id="sort-select"
+                        class="text-sm border border-brand-200 rounded-lg px-3 py-1.5 text-brand-700 bg-white focus:outline-none focus:ring-2 focus:ring-brand-300">
+                    <option value="default">{% trans "Par défaut" %}</option>
+                    <option value="alpha">{% trans "A → Z" %}</option>
+                    <option value="popular">{% trans "Populaire" %}</option>
+                    <option value="price-asc">{% trans "Prix ↑" %}</option>
+                    <option value="price-desc">{% trans "Prix ↓" %}</option>
+                </select>
+            </div>
+
+            <!-- Compteur -->
+            <span id="result-label" class="text-xs text-brand-400 whitespace-nowrap"></span>
         </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-4 pb-16 pt-8">
 
         <!-- ── Cours Populaires ── -->
-        {% if popular_courses and not q %}
-        <div class="mb-12">
+        {% with popular=courses|dictsortreversed:"enrollment_count" %}
+        <div id="popular-section" class="mb-12">
             <div class="flex items-center gap-3 mb-6" data-aos="fade-up">
                 <span class="w-1 h-7 rounded-full bg-brand-600 inline-block"></span>
                 <h2 class="text-2xl font-bold text-brand-800">{% trans "Cours Populaires" %}</h2>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {% for c in popular_courses %}
+                {% for c in popular %}
+                {% if c.enrollment_count > 0 and forloop.counter <= 4 %}
                 <div class="course-card bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100"
                      data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
-                    <!-- Image -->
                     <div class="relative h-36" style="background: linear-gradient(135deg,#C4853A,#7C3D0E);">
                         {% if c.course_card_image_url %}
-                        <img src="{{ c.course_card_image_url }}" alt="{{ c.name }}" class="w-full h-full object-cover">
+                        <img src="{{ c.course_card_image_url }}" alt="{{ c.name }}" class="w-full h-full object-cover" loading="lazy">
                         {% endif %}
-                        {% if c.enrollment_count %}
                         <div class="absolute top-2 right-2 px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full shadow">
                             ★ {{ c.enrollment_count }}
                         </div>
-                        {% endif %}
                         <div class="absolute bottom-2 left-2">
-                            {% if c.price is None or c.price == 0 %}
+                            {% if c.is_free %}
                             <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">{% trans "Gratuit" %}</span>
                             {% else %}
                             <span class="price-badge px-2 py-1 text-white text-xs font-bold rounded-full">{{ c.price }} {{ site_currency }}</span>
@@ -103,47 +124,54 @@
                         </a>
                     </div>
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>
-        {% endif %}
+        {% endwith %}
 
         <!-- ── Tous les cours ── -->
         <div>
             <div class="flex items-center gap-3 mb-6" data-aos="fade-up">
                 <span class="w-1 h-7 rounded-full bg-brand-400 inline-block"></span>
-                <h2 class="text-2xl font-bold text-brand-800">
-                    {% if q %}{% trans "Résultats pour" %} « {{ q }} »{% else %}{% trans "Tous les cours" %}{% endif %}
-                </h2>
+                <h2 id="section-title" class="text-2xl font-bold text-brand-800">{% trans "Tous les cours" %}</h2>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+            <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
                 {% for c in courses %}
                 <div class="course-card bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100"
-                     data-aos="fade-up" data-aos-delay="{{ forloop.counter0 | add:'0' }}0">
+                     data-course-card
+                     data-name="{{ c.name|lower|escapejs }}"
+                     data-free="{{ c.is_free|yesno:'true,false' }}"
+                     data-price="{{ c.price|default:0 }}"
+                     data-popular="{{ c.enrollment_count }}"
+                     data-aos="fade-up">
 
-                    <!-- Image -->
                     <div class="relative h-44" style="background: linear-gradient(135deg,#C4853A,#7C3D0E);">
                         {% if c.course_card_image_url %}
                         <img src="{{ c.course_card_image_url }}" alt="{{ c.name }}"
                              class="w-full h-full object-cover" loading="lazy">
                         {% endif %}
                         <div class="absolute top-2 left-2">
-                            {% if c.price is None or c.price == 0 %}
+                            {% if c.is_free %}
                             <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full shadow">{% trans "Gratuit" %}</span>
                             {% else %}
                             <span class="price-badge px-2 py-1 text-white text-xs font-bold rounded-full">{{ c.price }} {{ site_currency }}</span>
                             {% endif %}
                         </div>
+                        {% if c.enrollment_count > 0 %}
+                        <div class="absolute top-2 right-2 px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">
+                            ★ {{ c.enrollment_count }}
+                        </div>
+                        {% endif %}
                     </div>
 
                     <div class="p-4">
                         <h3 class="text-sm font-bold text-brand-800 mb-1 line-clamp-2 min-h-[2.75rem]">{{ c.name }}</h3>
                         <p class="text-xs text-brand-400 mb-3 line-clamp-2">{{ c.description|default:"Découvrez ce cours" }}</p>
 
-                        <!-- Prix -->
                         <div class="mb-3">
-                            {% if c.price is None or c.price == 0 %}
+                            {% if c.is_free %}
                             <span class="text-green-600 font-bold text-sm">{% trans "Gratuit" %}</span>
                             {% else %}
                             <span class="font-bold text-brand-700 text-sm">{{ c.price }} {{ site_currency }}</span>
@@ -164,7 +192,8 @@
                             </button>
                             {% endif %}
                             <a href="{% url 'course_details' c.id %}"
-                               class="px-3 py-2 bg-brand-50 border border-brand-200 text-brand-600 rounded-lg hover:bg-brand-100 transition" title="{% trans 'Détails' %}">
+                               class="px-3 py-2 bg-brand-50 border border-brand-200 text-brand-600 rounded-lg hover:bg-brand-100 transition"
+                               title="{% trans 'Détails' %}">
                                 <span class="material-symbols-outlined" style="font-size:18px;line-height:1.4;">visibility</span>
                             </a>
                         </div>
@@ -172,35 +201,23 @@
                 </div>
                 {% empty %}
                 <div class="col-span-full text-center py-16">
-                    <span class="material-symbols-outlined text-6xl text-brand-200 block mb-4">search_off</span>
-                    <h3 class="text-xl font-bold text-brand-700 mb-2">{% trans "Aucun cours trouvé" %}</h3>
-                    {% if q %}
-                    <a href="{% url 'courses' %}"
-                       class="inline-block px-5 py-2 text-white font-semibold rounded-lg mt-2"
-                       style="background:#7C3D0E;">
-                        {% trans "Voir tous les cours" %}
-                    </a>
-                    {% endif %}
+                    <span class="material-symbols-outlined text-6xl text-brand-200 block mb-4">school</span>
+                    <p class="text-brand-500">{% trans "Aucun cours disponible pour le moment." %}</p>
                 </div>
                 {% endfor %}
             </div>
 
-            <!-- ── Pagination ── -->
-            {% if pagination_meta and pagination_meta.total_pages > 1 %}
-            <div class="flex justify-center items-center gap-3">
-                {% if pagination_meta.prev_page %}
-                <a href="?page={{ pagination_meta.prev_page }}{% if q %}&q={{ q }}{% endif %}"
-                   class="px-4 py-2 border border-brand-300 text-brand-600 rounded-lg hover:bg-brand-100 transition">←</a>
-                {% endif %}
-                <span class="px-5 py-2 text-white font-bold rounded-lg" style="background:#7C3D0E;">
-                    {{ pagination_meta.current_page }} / {{ pagination_meta.total_pages }}
-                </span>
-                {% if pagination_meta.next_page %}
-                <a href="?page={{ pagination_meta.next_page }}{% if q %}&q={{ q }}{% endif %}"
-                   class="px-4 py-2 border border-brand-300 text-brand-600 rounded-lg hover:bg-brand-100 transition">→</a>
-                {% endif %}
+            <!-- État vide après filtrage -->
+            <div id="no-results" class="hidden col-span-full text-center py-16">
+                <span class="material-symbols-outlined text-6xl text-brand-200 block mb-4">search_off</span>
+                <h3 class="text-xl font-bold text-brand-700 mb-2">{% trans "Aucun cours trouvé" %}</h3>
+                <p class="text-brand-400 text-sm mb-4">{% trans "Essayez un autre mot-clé ou réinitialisez les filtres." %}</p>
+                <button onclick="resetFilters()"
+                        class="inline-block px-5 py-2 text-white font-semibold rounded-lg"
+                        style="background:#7C3D0E;">
+                    {% trans "Voir tous les cours" %}
+                </button>
             </div>
-            {% endif %}
         </div>
 
     </main>
@@ -208,5 +225,125 @@
 
 <!-- ── Modal Inscription ── -->
 {% include 'components/course_modal.html' %}
+
+<script>
+(function () {
+    const cards       = Array.from(document.querySelectorAll('[data-course-card]'));
+    const grid        = document.getElementById('courses-grid');
+    const noResults   = document.getElementById('no-results');
+    const searchInput = document.getElementById('search-input');
+    const clearBtn    = document.getElementById('search-clear');
+    const sortSelect  = document.getElementById('sort-select');
+    const resultLabel = document.getElementById('result-label');
+    const popularSec  = document.getElementById('popular-section');
+    const sectionTitle= document.getElementById('section-title');
+
+    let activeFilter = 'all';
+    let sortMode     = 'default';
+    let query        = '';
+    let debounceTimer;
+
+    // ── Filtrage principal ──────────────────────────────────────────
+    function applyFilters() {
+        const isFiltering = query !== '' || activeFilter !== 'all';
+
+        // Masquer/afficher la section populaire
+        if (popularSec) popularSec.classList.toggle('hidden', isFiltering);
+
+        // Titre de section
+        if (sectionTitle) {
+            sectionTitle.textContent = isFiltering
+                ? '{% trans "Résultats" %}'
+                : '{% trans "Tous les cours" %}';
+        }
+
+        // Filtrer
+        let visible = [];
+        cards.forEach(card => {
+            const nameMatch   = !query || card.dataset.name.includes(query);
+            const filterMatch = activeFilter === 'all'
+                || (activeFilter === 'free' && card.dataset.free === 'true')
+                || (activeFilter === 'paid' && card.dataset.free === 'false');
+            const show = nameMatch && filterMatch;
+            card.classList.toggle('hidden-card', !show);
+            if (show) visible.push(card);
+        });
+
+        // Tri
+        sortCards(visible);
+
+        // Compteur
+        const total = cards.length;
+        resultLabel.textContent = isFiltering
+            ? `${visible.length} / ${total} {% trans "cours" %}`
+            : `${total} {% trans "cours" %}`;
+
+        // État vide
+        noResults.classList.toggle('hidden', visible.length > 0);
+    }
+
+    // ── Tri ─────────────────────────────────────────────────────────
+    function sortCards(visible) {
+        if (sortMode === 'default') return;
+
+        visible.sort((a, b) => {
+            if (sortMode === 'alpha') return a.dataset.name.localeCompare(b.dataset.name);
+            if (sortMode === 'popular') return Number(b.dataset.popular) - Number(a.dataset.popular);
+            if (sortMode === 'price-asc') return Number(a.dataset.price) - Number(b.dataset.price);
+            if (sortMode === 'price-desc') return Number(b.dataset.price) - Number(a.dataset.price);
+            return 0;
+        });
+
+        // Réorganiser dans le DOM
+        visible.forEach(card => grid.appendChild(card));
+    }
+
+    // ── Événements ──────────────────────────────────────────────────
+    searchInput.addEventListener('input', function () {
+        query = this.value.trim().toLowerCase();
+        clearBtn.classList.toggle('hidden', query === '');
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(applyFilters, 200);
+    });
+
+    clearBtn.addEventListener('click', function () {
+        searchInput.value = '';
+        query = '';
+        clearBtn.classList.add('hidden');
+        searchInput.focus();
+        applyFilters();
+    });
+
+    document.querySelectorAll('.filter-pill').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            activeFilter = this.dataset.filter;
+            applyFilters();
+        });
+    });
+
+    sortSelect.addEventListener('change', function () {
+        sortMode = this.value;
+        applyFilters();
+    });
+
+    // ── Reset global ─────────────────────────────────────────────────
+    window.resetFilters = function () {
+        searchInput.value = '';
+        query = '';
+        clearBtn.classList.add('hidden');
+        activeFilter = 'all';
+        sortMode = 'default';
+        sortSelect.value = 'default';
+        document.querySelectorAll('.filter-pill').forEach(b => b.classList.remove('active'));
+        document.querySelector('[data-filter="all"]').classList.add('active');
+        applyFilters();
+    };
+
+    // Init
+    applyFilters();
+})();
+</script>
 
 {% endblock content %}
