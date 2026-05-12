@@ -497,9 +497,10 @@ PHONENUMBER_DEFAULT_FORMAT = "INTERNATIONAL"
 THINKIFIC = {
     'AUTH_TOKEN': os.getenv('THINKIFIC_SECRET_KEY', ''),
     'SITE_ID': os.getenv('SITE_ID', 'koulakay'),
-    # Clé utilisée pour valider les signatures HMAC des webhooks Thinkific
-    # À configurer dans Thinkific → Settings → Webhooks → Secret
     'SECRET_KEY': os.getenv('THINKIFIC_WEBHOOK_SECRET', ''),
+    # SSO Signing Secret (API Access Token → SSO Signing Secret)
+    # Différent de AUTH_TOKEN — utilisé pour signer les JWT SSO
+    'SSO_SECRET': os.getenv('THINKIFIC_SSO_SECRET', os.getenv('THINKIFIC_WEBHOOK_SECRET', '')),
 }
 
 PLOPPLOP = {

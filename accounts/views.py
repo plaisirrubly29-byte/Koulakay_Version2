@@ -213,47 +213,42 @@ def sync_thinkific_user(request):
 @login_required
 def thinkific_sso(request):
     """
-    Génère un SSO token Thinkific et redirige l'utilisateur directement
-    sur la plateforme Thinkific sans qu'il ait à se reconnecter.
-
-    Usage : /accounts/thinkific-sso/?return_to=/courses/mon-cours
-    Si return_to est absent, redirige vers le dashboard Thinkific.
+    SSO JWT vers Thinkific — connecte l'utilisateur sans re-login.
+    Génère un JWT signé avec THINKIFIC_SSO_SECRET et redirige vers
+    https://{site}.thinkific.com/api/sso/v2/sso/jwt?jwt={token}&return_to={path}
     """
-    thinkific_user_id = request.user.thinkific_user_id
+    import jwt as pyjwt
+    import time
+    from urllib.parse import urlencode
 
-    if not thinkific_user_id:
+    user = request.user
+    site_id = settings.THINKIFIC['SITE_ID']
+    sso_secret = settings.THINKIFIC.get('SSO_SECRET', '')
+    return_to = request.GET.get('return_to', '/enrollments')
+    fallback_url = f"https://{site_id}.thinkific.com{return_to}"
+
+    if not user.thinkific_user_id:
         messages.error(request, _("Votre compte n'est pas lié à Thinkific."))
         return redirect('home')
 
-    return_to = request.GET.get('return_to', '/enrollments')
-    site_id = settings.THINKIFIC['SITE_ID']
-    fallback_url = f"https://{site_id}.thinkific.com{return_to}"
+    if not sso_secret:
+        print("[SSO Thinkific] THINKIFIC_SSO_SECRET absent — fallback sans SSO")
+        return redirect(fallback_url)
 
     try:
-        api_url = f"https://api.thinkific.com/api/public/v1/users/{thinkific_user_id}/sso_token"
-        headers = {
-            "X-Auth-API-Key": settings.THINKIFIC['AUTH_TOKEN'],
-            "X-Auth-Subdomain": site_id,
+        # Thinkific's SSO server runs ~3h behind UTC (timezone misconfiguration on their end).
+        # Subtracting 10800s makes the iat fall within their acceptance window.
+        payload = {
+            'email': user.email,
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'iat': int(time.time()) - 10800,
         }
-        response = requests.post(api_url, headers=headers, timeout=10)
-
-        # SSO token non disponible sur ce plan → redirect direct vers Thinkific
-        if response.status_code == 404:
-            return redirect(fallback_url)
-
-        response.raise_for_status()
-
-        token = response.json().get('token')
-        if not token:
-            raise ValueError(f"Token SSO absent — réponse: {response.text[:200]}")
-
-        from urllib.parse import urlencode
-        params = {'token': token, 'return_to': return_to}
-        sso_url = f"https://{site_id}.thinkific.com/api/sso?{urlencode(params)}"
-
+        token = pyjwt.encode(payload, sso_secret, algorithm='HS256')
+        params = {'jwt': token, 'return_to': return_to}
+        sso_url = f"https://{site_id}.thinkific.com/api/sso/v2/sso/jwt?{urlencode(params)}"
         return redirect(sso_url)
 
     except Exception as e:
-        print(f"[SSO Thinkific] Erreur user={thinkific_user_id}: {e}")
-        # En cas d'erreur, rediriger quand même vers Thinkific plutôt que bloquer
+        print(f"[SSO Thinkific] Erreur génération JWT user={user.email}: {e}")
         return redirect(fallback_url)
