@@ -27,6 +27,21 @@
     html.dark .course-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
     .course-link-btn { transition: filter 0.2s; }
     .course-link-btn:hover { filter: brightness(0.85); }
+    /* skeleton */
+    @keyframes skeleton-wave {
+        0%   { background-position: -400px 0; }
+        100% { background-position:  400px 0; }
+    }
+    .skeleton-shimmer {
+        background: linear-gradient(90deg, #F0EAE4 25%, #E8DFDA 50%, #F0EAE4 75%);
+        background-size: 800px 100%;
+        animation: skeleton-wave 1.4s ease-in-out infinite;
+    }
+    html.dark .skeleton-shimmer {
+        background: linear-gradient(90deg, #1F2130 25%, #252748 50%, #1F2130 75%);
+        background-size: 800px 100%;
+    }
+    html.dark #skeleton-grid .bg-white { background: #18191F !important; border-color: rgba(148,163,184,0.08) !important; }
 </style>
 {% endblock %}
 
@@ -148,6 +163,46 @@
                 <h2 id="section-title" class="text-2xl font-bold text-brand-800">{% trans "Tous les cours" %}</h2>
             </div>
 
+            <!-- Skeleton de chargement -->
+            <div id="skeleton-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100">
+                    <div class="skeleton-shimmer h-44 w-full"></div>
+                    <div class="p-4 flex flex-col gap-3">
+                        <div class="skeleton-shimmer h-4 rounded w-full"></div>
+                        <div class="skeleton-shimmer h-4 rounded w-3/4"></div>
+                        <div class="skeleton-shimmer h-3 rounded w-1/2"></div>
+                        <div class="skeleton-shimmer h-9 rounded-lg mt-1"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100">
+                    <div class="skeleton-shimmer h-44 w-full"></div>
+                    <div class="p-4 flex flex-col gap-3">
+                        <div class="skeleton-shimmer h-4 rounded w-full"></div>
+                        <div class="skeleton-shimmer h-4 rounded w-3/4"></div>
+                        <div class="skeleton-shimmer h-3 rounded w-1/2"></div>
+                        <div class="skeleton-shimmer h-9 rounded-lg mt-1"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100">
+                    <div class="skeleton-shimmer h-44 w-full"></div>
+                    <div class="p-4 flex flex-col gap-3">
+                        <div class="skeleton-shimmer h-4 rounded w-full"></div>
+                        <div class="skeleton-shimmer h-4 rounded w-3/4"></div>
+                        <div class="skeleton-shimmer h-3 rounded w-1/2"></div>
+                        <div class="skeleton-shimmer h-9 rounded-lg mt-1"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100">
+                    <div class="skeleton-shimmer h-44 w-full"></div>
+                    <div class="p-4 flex flex-col gap-3">
+                        <div class="skeleton-shimmer h-4 rounded w-full"></div>
+                        <div class="skeleton-shimmer h-4 rounded w-3/4"></div>
+                        <div class="skeleton-shimmer h-3 rounded w-1/2"></div>
+                        <div class="skeleton-shimmer h-9 rounded-lg mt-1"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="courses-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
                 {% for c in courses %}
                 <div class="course-card bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100"
@@ -242,17 +297,18 @@
     const PILL_ACTIVE   = ['bg-brand-700', 'border-brand-700', 'text-white',      'shadow-sm'];
     const PILL_INACTIVE = ['bg-white',      'border-brand-200', 'text-brand-600'];
 
-    const cards       = Array.from(document.querySelectorAll('[data-course-card]'));
-    const grid        = document.getElementById('courses-grid');
-    const noResults   = document.getElementById('no-results');
-    const searchInput = document.getElementById('search-input');
-    const clearBtn    = document.getElementById('search-clear');
-    const searchBtn   = document.getElementById('search-btn');
-    const sortSelect  = document.getElementById('sort-select');
-    const resultLabel = document.getElementById('result-label');
-    const popularSec  = document.getElementById('popular-section');
-    const sectionTitle= document.getElementById('section-title');
-    const pills       = Array.from(document.querySelectorAll('.filter-pill'));
+    const cards        = Array.from(document.querySelectorAll('[data-course-card]'));
+    const grid         = document.getElementById('courses-grid');
+    const noResults    = document.getElementById('no-results');
+    const searchInput  = document.getElementById('search-input');
+    const clearBtn     = document.getElementById('search-clear');
+    const searchBtn    = document.getElementById('search-btn');
+    const sortSelect   = document.getElementById('sort-select');
+    const resultLabel  = document.getElementById('result-label');
+    const popularSec   = document.getElementById('popular-section');
+    const sectionTitle = document.getElementById('section-title');
+    const pills        = Array.from(document.querySelectorAll('.filter-pill'));
+    const skeletonGrid = document.getElementById('skeleton-grid');
 
     let activeFilter = 'all';
     let sortMode     = 'default';
@@ -305,6 +361,18 @@
         noResults.classList.toggle('hidden', visible.length > 0);
     }
 
+    // ── Skeleton flash then filter ────────────────────────────────────
+    function triggerFilter() {
+        skeletonGrid.classList.remove('hidden');
+        grid.style.transition = 'opacity 0.12s';
+        grid.style.opacity = '0';
+        setTimeout(() => {
+            applyFilters();
+            skeletonGrid.classList.add('hidden');
+            grid.style.opacity = '1';
+        }, 180);
+    }
+
     // ── Tri ──────────────────────────────────────────────────────────
     function sortCards(visible) {
         if (sortMode === 'default') return;
@@ -323,21 +391,21 @@
         query = this.value.trim().toLowerCase();
         clearBtn.classList.toggle('hidden', query === '');
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(applyFilters, 200);
+        debounceTimer = setTimeout(triggerFilter, 200);
     });
 
     searchInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') {
             clearTimeout(debounceTimer);
             query = this.value.trim().toLowerCase();
-            applyFilters();
+            triggerFilter();
         }
     });
 
     if (searchBtn) {
         searchBtn.addEventListener('click', () => {
             query = searchInput.value.trim().toLowerCase();
-            applyFilters();
+            triggerFilter();
         });
     }
 
@@ -346,20 +414,20 @@
         query = '';
         clearBtn.classList.add('hidden');
         searchInput.focus();
-        applyFilters();
+        triggerFilter();
     });
 
     pills.forEach(btn => {
         btn.addEventListener('click', function () {
             activeFilter = this.dataset.filter;
             setPill(activeFilter);
-            applyFilters();
+            triggerFilter();
         });
     });
 
     sortSelect.addEventListener('change', function () {
         sortMode = this.value;
-        applyFilters();
+        triggerFilter();
     });
 
     // ── Reset global ─────────────────────────────────────────────────
@@ -371,7 +439,7 @@
         sortMode = 'default';
         sortSelect.value = 'default';
         setPill('all');
-        applyFilters();
+        triggerFilter();
     };
 
     applyFilters();

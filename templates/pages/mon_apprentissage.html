@@ -45,6 +45,11 @@
     /* dark */
     html.dark .empty-icon-circle { background: #1F2130 !important; animation-name: empty-sonar-dark; }
     html.dark .empty-cap { color: #7C83F5; }
+    /* progress ring */
+    .progress-ring-bg   { stroke: #E8DFDA; }
+    .progress-ring-fill { stroke: #7C3D0E; transition: stroke-dasharray 0.6s ease; }
+    html.dark .progress-ring-bg   { stroke: rgba(124,131,245,0.15); }
+    html.dark .progress-ring-fill { stroke: #7C83F5; }
 </style>
 {% endblock head %}
 
@@ -134,16 +139,20 @@
                     </div>
                     {% endif %}
 
-                    <!-- Barre de progression -->
+                    <!-- Anneau de progression SVG -->
                     {% if course.percentage_completed %}
-                    <div>
-                        <div class="flex justify-between text-xs text-brand-400 mb-1">
-                            <span>{% trans "Progression" %}</span>
-                            <span>{{ course.percentage_completed }}%</span>
-                        </div>
-                        <div class="w-full bg-brand-100 rounded-full h-1.5">
-                            <div class="bg-brand-600 h-1.5 rounded-full transition-all"
-                                 style="width: {{ course.percentage_completed }}%"></div>
+                    <div class="flex items-center gap-3">
+                        <svg viewBox="0 0 36 36" width="44" height="44" style="transform:rotate(-90deg);flex-shrink:0;">
+                            <circle cx="18" cy="18" r="15.9" fill="none"
+                                    class="progress-ring-bg" stroke-width="2.5"/>
+                            <circle cx="18" cy="18" r="15.9" fill="none"
+                                    class="progress-ring-fill" stroke-width="2.5"
+                                    stroke-dasharray="{{ course.percentage_completed }} 100"
+                                    stroke-linecap="round"/>
+                        </svg>
+                        <div class="text-xs text-brand-500 leading-tight">
+                            <span class="block font-bold text-brand-700 text-sm">{{ course.percentage_completed }}%</span>
+                            <span>{% trans "complété" %}</span>
                         </div>
                     </div>
                     {% endif %}

@@ -75,6 +75,27 @@ html.dark #id_login:focus, html.dark #id_password:focus {
 html.dark #id_login::placeholder, html.dark #id_password::placeholder { color: rgba(155,163,184,0.45); }
 html.dark #id_remember { accent-color: #7C83F5; }
 html.dark .kl-btn { background: linear-gradient(135deg, #4338CA, #6366F1); }
+/* floating particles */
+@keyframes float-a {
+    0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0.6; }
+    33%  { transform: translateY(-28px) translateX(12px) scale(1.1); opacity: 0.9; }
+    66%  { transform: translateY(-14px) translateX(-8px) scale(0.95); opacity: 0.75; }
+}
+@keyframes float-b {
+    0%, 100% { transform: translateY(0) translateX(0) scale(1.05); opacity: 0.5; }
+    40%  { transform: translateY(-22px) translateX(-14px) scale(0.9); opacity: 0.8; }
+    70%  { transform: translateY(-10px) translateX(10px) scale(1.15); opacity: 0.65; }
+}
+@keyframes float-c {
+    0%, 100% { transform: translateY(0) translateX(0); opacity: 0.4; }
+    50%  { transform: translateY(-18px) translateX(6px) scale(1.08); opacity: 0.7; }
+}
+.hero-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    mix-blend-mode: screen;
+}
 </style>
 {% endblock %}
 
@@ -82,7 +103,7 @@ html.dark .kl-btn { background: linear-gradient(135deg, #4338CA, #6366F1); }
 <div class="flex min-h-screen w-full">
 
   <!-- ── Panneau gauche — branding ── -->
-  <div class="hero-bg hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 text-white">
+  <div class="hero-bg hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 text-white relative overflow-hidden">
     <a href="{% url 'home' %}" class="flex flex-row items-center gap-4 mb-10">
       {% if site_config.logo_principal %}
         <img src="{{ site_config.logo_principal.url }}" alt="KouLakay" class="h-16 w-auto drop-shadow-lg">
@@ -106,6 +127,12 @@ html.dark .kl-btn { background: linear-gradient(135deg, #4338CA, #6366F1); }
     <p class="text-gray-300 text-center max-w-xs">
       {% trans "Apprenez à votre rythme avec des certifications reconnues." %}
     </p>
+    <!-- Particules flottantes -->
+    <span class="hero-particle" style="width:90px;height:90px;bottom:15%;left:8%;background:radial-gradient(circle,rgba(255,200,100,0.18),transparent 70%);animation:float-a 7s ease-in-out infinite;"></span>
+    <span class="hero-particle" style="width:60px;height:60px;top:20%;right:12%;background:radial-gradient(circle,rgba(255,255,255,0.12),transparent 70%);animation:float-b 9s ease-in-out infinite 1.5s;"></span>
+    <span class="hero-particle" style="width:45px;height:45px;top:55%;left:25%;background:radial-gradient(circle,rgba(255,180,80,0.15),transparent 70%);animation:float-c 6s ease-in-out infinite 3s;"></span>
+    <span class="hero-particle" style="width:30px;height:30px;bottom:30%;right:20%;background:radial-gradient(circle,rgba(255,255,255,0.1),transparent 70%);animation:float-a 8s ease-in-out infinite 2s;"></span>
+    <span class="hero-particle" style="width:70px;height:70px;top:35%;left:15%;background:radial-gradient(circle,rgba(200,150,80,0.12),transparent 70%);animation:float-b 10s ease-in-out infinite 0.5s;"></span>
   </div>
 
   <!-- ── Panneau droit — formulaire ── -->
