@@ -16,11 +16,17 @@
     .sticky-card { position: sticky; top: 1.5rem; }
     .modal-overlay { transition: opacity 0.3s; }
     .modal-inner { transition: transform 0.3s, opacity 0.3s; }
+    /* dark */
+    html.dark .tab-btn { color: #CFA472; }
+    html.dark .tab-btn.active { color: #E2C9A8; }
+    html.dark .tab-btn.active::after { background: #C4853A; }
+    html.dark .chapter-row:hover { background: #220E05; }
+    html.dark .modal-inner { background: #1E0F05 !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="min-h-screen" style="background:#FBF7F4;">
+<div class="min-h-screen">
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
     <!-- Messages -->
@@ -93,7 +99,7 @@
                 <p class="text-brand-700 leading-relaxed mb-6 whitespace-pre-wrap">
                     {{ course.description|default:_("Ce cours vous fournira les connaissances nécessaires.") }}
                 </p>
-                <div class="p-5 rounded-xl border border-brand-200" style="background:#FBF7F4;">
+                <div class="p-5 rounded-xl border border-brand-200 bg-brand-50">
                     <h3 class="text-base font-bold text-brand-800 mb-4">{% trans "Ce que vous apprendrez" %}</h3>
                     <ul class="space-y-2">
                         <li class="flex items-start gap-2 text-sm text-brand-700">

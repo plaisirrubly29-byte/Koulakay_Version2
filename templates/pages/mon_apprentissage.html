@@ -4,6 +4,45 @@
 
 {% block title %}{% trans "Mon apprentissage" %} — KouLakay{% endblock %}
 
+{% block head %}
+<style>
+    @keyframes empty-float {
+        0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); }
+        50%       { transform: translateY(-13px) rotate(4deg) scale(1.1); }
+    }
+    @keyframes empty-sonar {
+        0%   { box-shadow: 0 0 0 0    rgba(196,133,58,0.5); }
+        70%  { box-shadow: 0 0 0 24px rgba(196,133,58,0); }
+        100% { box-shadow: 0 0 0 0    rgba(196,133,58,0); }
+    }
+    @keyframes empty-in {
+        from { opacity: 0; transform: translateY(20px) scale(0.88); }
+        to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    .empty-icon-circle {
+        animation: empty-sonar 2.8s ease-out infinite;
+    }
+    .empty-cap {
+        display: inline-block;
+        animation: empty-float 3.5s ease-in-out infinite;
+    }
+    .empty-primary-btn {
+        animation: empty-in 0.5s ease 0.4s both, pulse-brand 3s ease-in-out 1s infinite;
+    }
+    .empty-primary-btn:hover { animation: none; }
+    .empty-sec-btn {
+        animation: empty-in 0.5s ease 0.56s both;
+    }
+    .empty-sec-btn i {
+        transition: transform 0.28s ease;
+    }
+    .empty-sec-btn:hover i { transform: translateX(5px); }
+    /* dark */
+    html.dark .empty-icon-circle { background: #1E0F05 !important; }
+    html.dark .empty-cap { color: #C4853A; }
+</style>
+{% endblock head %}
+
 {% block content %}
 <section class="max-w-6xl mx-auto px-4 py-10">
 
@@ -137,20 +176,35 @@
 
     {% else %}
         <!-- État vide -->
-        <div class="flex flex-col items-center justify-center py-24 text-center" data-aos="fade-up">
-            <div class="w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center mb-6">
-                <i class="fa fa-graduation-cap text-4xl text-brand-300"></i>
+        <div class="flex flex-col items-center justify-center py-24 text-center">
+
+            <!-- Icône flottante avec sonar -->
+            <div class="empty-icon-circle w-24 h-24 rounded-full bg-brand-100 flex items-center justify-center mb-8"
+                 data-aos="zoom-in">
+                <i class="empty-cap fa fa-graduation-cap text-4xl text-brand-400"></i>
             </div>
-            <h2 class="text-lg font-semibold text-brand-700 mb-2">
+
+            <h2 class="text-xl font-bold text-brand-800 mb-3" data-aos="fade-up" data-aos-delay="80">
                 {% trans "Vous n'êtes inscrit à aucun cours" %}
             </h2>
-            <p class="text-sm text-brand-400 max-w-sm mb-6">
+            <p class="text-sm text-brand-400 max-w-sm mb-10 leading-relaxed" data-aos="fade-up" data-aos-delay="160">
                 {% trans "Découvrez nos formations et commencez votre parcours d'apprentissage dès aujourd'hui." %}
             </p>
-            <a href="{% url 'courses' %}" class="kl-btn-cta px-6 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2">
-                <i class="fa fa-search"></i>
-                {% trans "Voir les cours disponibles" %}
-            </a>
+
+            <!-- Boutons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="{% url 'courses' %}"
+                   class="empty-primary-btn kl-btn-cta px-7 py-3 rounded-xl text-white font-semibold inline-flex items-center gap-2">
+                    <i class="fa fa-search"></i>
+                    {% trans "Voir les cours disponibles" %}
+                </a>
+                <a href="{% url 'courses' %}"
+                   class="empty-sec-btn btn-kl-secondary px-7 py-3 rounded-xl font-semibold inline-flex items-center gap-2">
+                    <i class="fa fa-compass"></i>
+                    {% trans "Explorer d'autres cours" %}
+                </a>
+            </div>
+
         </div>
     {% endif %}
 

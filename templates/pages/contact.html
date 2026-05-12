@@ -5,7 +5,7 @@
 {% block title %}{% trans "Contact" %} — {{ site_config.site_name }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen" style="background:#FBF7F4;">
+<div class="min-h-screen">
 
     <!-- Hero -->
     <div class="relative overflow-hidden rounded-xl mx-4 mt-6"
@@ -70,8 +70,7 @@
                     <div class="space-y-5">
                         {% if site_config.address %}
                         <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style="background:#FBF7F4;">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-brand-50">
                                 <span class="material-symbols-outlined text-brand-600" style="font-size:20px;">location_on</span>
                             </div>
                             <div>
@@ -83,8 +82,7 @@
 
                         {% if site_config.phone_1 %}
                         <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style="background:#FBF7F4;">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-brand-50">
                                 <span class="material-symbols-outlined text-brand-600" style="font-size:20px;">call</span>
                             </div>
                             <div>
@@ -104,8 +102,7 @@
 
                         {% if site_config.email %}
                         <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style="background:#FBF7F4;">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-brand-50">
                                 <span class="material-symbols-outlined text-brand-600" style="font-size:20px;">mail</span>
                             </div>
                             <div>

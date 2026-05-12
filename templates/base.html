@@ -7,6 +7,7 @@
 {% get_current_language as CURRENT_LANG %}
 <html lang="{{ CURRENT_LANG }}" class="light">
 <head>
+    <script>(function(){var t=localStorage.getItem('kl-theme');if(t==='dark'||(t===null&&matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.replace('light','dark');}})();</script>
     <title>{% block title %}KouLakay{% endblock %}</title>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -110,6 +111,22 @@
         .btn-kl-primary:hover {
             background: #A0663B;
             transform: translateY(-1px);
+        }
+        .btn-kl-secondary {
+            background: transparent;
+            color: #7C3D0E;
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-size: 0.875rem;
+            border: 2px solid #C4853A;
+            transition: background 0.22s, color 0.22s, transform 0.15s, box-shadow 0.22s;
+        }
+        .btn-kl-secondary:hover {
+            background: #C4853A;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(196,133,58,0.35);
         }
         .btn-kl-outline {
             background: transparent;
@@ -320,6 +337,147 @@
         .logo-wrap:hover::after {
             animation: shimmer-run 0.55s ease forwards;
         }
+
+        /* ── Footer animations ── */
+        .kl-footer ul a i {
+            display: inline-block;
+            transition: transform 0.22s ease;
+        }
+        .kl-footer ul a:hover i { transform: translateX(5px); }
+
+        .footer-social {
+            transition: transform 0.25s cubic-bezier(.22,.68,0,1.3), background 0.25s ease !important;
+        }
+        .footer-social:hover {
+            transform: rotate(18deg) scale(1.22) !important;
+        }
+        @keyframes footer-social-in {
+            from { opacity:0; transform: translateY(12px) scale(0.75); }
+            to   { opacity:1; transform: translateY(0)    scale(1); }
+        }
+        .footer-social:nth-child(1) { animation: footer-social-in 0.42s ease 0.08s both; }
+        .footer-social:nth-child(2) { animation: footer-social-in 0.42s ease 0.18s both; }
+        .footer-social:nth-child(3) { animation: footer-social-in 0.42s ease 0.28s both; }
+        .footer-social:nth-child(4) { animation: footer-social-in 0.42s ease 0.38s both; }
+
+        .footer-contact-icon {
+            transition: box-shadow 0.3s ease, transform 0.3s ease;
+        }
+        .footer-contact-icon:hover {
+            box-shadow: 0 0 14px rgba(196,133,58,0.6), 0 0 5px rgba(196,133,58,0.35);
+            transform: scale(1.12);
+        }
+
+        /* ══ Dark mode ══ */
+        html.dark { color-scheme: dark; }
+        html.dark body { background-color: #130A03; color: #F2E8DC; }
+
+        html.dark .kl-header {
+            background: linear-gradient(135deg, #0A0400 0%, #150803 60%, #1C0A04 100%);
+            box-shadow: 0 2px 16px rgba(0,0,0,0.7);
+        }
+        html.dark .dropdown-menu { background: #1E0F05 !important; border: 1px solid rgba(196,133,58,0.25) !important; }
+        html.dark .dropdown-item { color: #E2C9A8 !important; }
+        html.dark .dropdown-item:hover, html.dark .dropdown-item:focus { background: rgba(196,133,58,0.15) !important; color: #F2E8DC !important; }
+
+        html.dark .btn-kl-secondary { color: #E2C9A8; border-color: rgba(196,133,58,0.45); }
+        html.dark .btn-kl-secondary:hover { background: rgba(196,133,58,0.15); color: #F2E8DC; box-shadow: 0 4px 14px rgba(0,0,0,0.4); }
+
+        html.dark .modal-content { background: #1E0F05 !important; border: 1px solid rgba(196,133,58,0.2) !important; }
+        html.dark .modal-backdrop.show { background: rgba(0,0,0,0.8); }
+
+        html.dark input, html.dark textarea, html.dark select {
+            background-color: #1E0F05 !important;
+            border-color: rgba(196,133,58,0.3) !important;
+            color: #F2E8DC !important;
+        }
+        html.dark input::placeholder, html.dark textarea::placeholder { color: rgba(242,232,220,0.3) !important; }
+        html.dark input:focus, html.dark textarea:focus {
+            border-color: #C4853A !important;
+            box-shadow: 0 0 0 3px rgba(196,133,58,0.2) !important;
+        }
+
+        /* Backgrounds */
+        html.dark .bg-white    { background-color: #1E0F05 !important; }
+        html.dark .bg-brand-50 { background-color: #130A03 !important; }
+        html.dark .bg-brand-100 { background-color: #1E0F05 !important; }
+        html.dark .bg-brand-200 { background-color: #2A1208 !important; }
+        html.dark .bg-amber-50  { background-color: #1A1005 !important; }
+        html.dark .bg-green-50  { background-color: rgba(34,197,94,0.08) !important; }
+        html.dark .bg-green-100 { background-color: rgba(34,197,94,0.15) !important; }
+        html.dark .bg-red-50    { background-color: rgba(239,68,68,0.08) !important; }
+        html.dark .bg-yellow-50 { background-color: rgba(234,179,8,0.08) !important; }
+
+        /* Text */
+        html.dark .text-brand-900, html.dark .text-brand-800 { color: #F2E8DC !important; }
+        html.dark .text-brand-700 { color: #E2C9A8 !important; }
+        html.dark .text-brand-600 { color: #CFA472 !important; }
+        html.dark .text-brand-500 { color: #C4853A !important; }
+        html.dark .text-brand-400 { color: #A86C38 !important; }
+        html.dark .text-brand-300 { color: #8A5528 !important; }
+        html.dark .text-amber-700 { color: #D4A05A !important; }
+        html.dark .text-amber-500, html.dark .text-amber-600 { color: #C4853A !important; }
+        html.dark .text-green-600, html.dark .text-green-500 { color: #4ade80 !important; }
+        html.dark .text-green-800 { color: #86efac !important; }
+        html.dark .text-gray-800  { color: #E2C9A8 !important; }
+        html.dark .text-gray-600  { color: #CFA472 !important; }
+        html.dark .text-gray-500  { color: #A86C38 !important; }
+        html.dark .text-yellow-700 { color: #FCD34D !important; }
+
+        /* Borders */
+        html.dark .border-brand-50  { border-color: rgba(196,133,58,0.1) !important; }
+        html.dark .border-brand-100 { border-color: rgba(196,133,58,0.15) !important; }
+        html.dark .border-brand-200 { border-color: rgba(196,133,58,0.25) !important; }
+        html.dark .border-brand-300 { border-color: rgba(196,133,58,0.35) !important; }
+        html.dark .border-amber-100 { border-color: rgba(196,133,58,0.15) !important; }
+        html.dark .border-gray-100  { border-color: rgba(196,133,58,0.15) !important; }
+        html.dark .divide-brand-50 > * + * { border-color: rgba(196,133,58,0.1) !important; }
+        html.dark .border-dashed    { border-color: rgba(196,133,58,0.25) !important; }
+        html.dark .border-b { border-color: rgba(196,133,58,0.15) !important; }
+        html.dark .border-t { border-color: rgba(196,133,58,0.15) !important; }
+        html.dark .border-y { border-color: rgba(196,133,58,0.15) !important; }
+
+        /* Shadows */
+        html.dark .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.7) !important; }
+        html.dark .shadow    { box-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; }
+        html.dark .shadow-md { box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important; }
+        html.dark .shadow-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.7) !important; }
+        html.dark .shadow-2xl { box-shadow: 0 16px 50px rgba(0,0,0,0.8) !important; }
+        html.dark .shadow-xl { box-shadow: 0 10px 40px rgba(0,0,0,0.75) !important; }
+
+        /* Hover states */
+        html.dark .hover\:bg-brand-50:hover   { background-color: #220E05 !important; }
+        html.dark .hover\:bg-red-50:hover     { background-color: rgba(239,68,68,0.1) !important; }
+        html.dark .hover\:text-brand-700:hover { color: #E8D8C4 !important; }
+        html.dark .hover\:text-gold-400:hover  { color: #D4A05A !important; }
+        html.dark .hover\:text-brand-600:hover { color: #CFA472 !important; }
+        html.dark .hover\:bg-amber-50:hover   { background-color: rgba(180,83,9,0.15) !important; }
+
+        /* Scrollbar */
+        html.dark ::-webkit-scrollbar-track { background: #1E0F05; }
+        html.dark ::-webkit-scrollbar-thumb { background: #7C3D0E; }
+
+        /* Dark toggle button */
+        .kl-dark-btn {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.2);
+            color: #F2E8DC;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; flex-shrink: 0;
+            transition: background 0.2s, transform 0.25s;
+        }
+        .kl-dark-btn:hover { background: rgba(255,255,255,0.2); transform: rotate(22deg); }
+        html.dark .kl-dark-btn { background: rgba(196,133,58,0.2); border-color: rgba(196,133,58,0.4); }
+        html.dark .kl-dark-btn:hover { background: rgba(196,133,58,0.35); }
+
+        /* Smooth global transition when toggling */
+        html.dark-transition, html.dark-transition * {
+            transition: background-color 0.3s ease, color 0.2s ease,
+                        border-color 0.3s ease, box-shadow 0.3s ease !important;
+        }
     </style>
     {% block head %}{% endblock head %}
 </head>
@@ -386,6 +544,11 @@
                         </a>
                     {% endif %}
 
+                    <!-- Dark toggle -->
+                    <button id="dark-toggle" class="kl-dark-btn" title="{% trans 'Mode sombre / clair' %}">
+                        <i id="dark-icon" class="fa fa-moon"></i>
+                    </button>
+
                     <!-- Langue -->
                     <div class="relative">
                         {% get_current_language as LANGUAGE_CODE %}
@@ -437,6 +600,12 @@
                     <a href="{% url 'account_signup' %}" class="btn-kl-primary flex-1 text-center">{% trans "S'inscrire" %}</a>
                 </div>
                 {% endif %}
+                <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between">
+                    <span class="text-xs text-brand-300">{% trans "Apparence" %}</span>
+                    <button id="dark-toggle-mobile" class="kl-dark-btn">
+                        <i id="dark-icon-mobile" class="fa fa-moon"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -478,7 +647,7 @@
             <div class="grid grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-3">
 
                 <!-- Navigation -->
-                <div>
+                <div data-aos="fade-up" data-aos-delay="0">
                     <h3 class="font-bold uppercase tracking-widest text-xs mb-5"
                         style="color:#C4853A;letter-spacing:.12em;">{% trans "Navigation" %}</h3>
                     <ul class="space-y-3 text-sm">
@@ -518,7 +687,7 @@
                 </div>
 
                 <!-- Mon compte -->
-                <div>
+                <div data-aos="fade-up" data-aos-delay="100">
                     <h3 class="font-bold uppercase tracking-widest text-xs mb-5"
                         style="color:#C4853A;letter-spacing:.12em;">{% trans "Mon compte" %}</h3>
                     <ul class="space-y-3 text-sm">
@@ -547,13 +716,13 @@
                 </div>
 
                 <!-- Contact + Réseaux -->
-                <div>
+                <div data-aos="fade-up" data-aos-delay="200">
                     <h3 class="font-bold uppercase tracking-widest text-xs mb-5"
                         style="color:#C4853A;letter-spacing:.12em;">{% trans "Contact" %}</h3>
                     <ul class="space-y-3 text-sm mb-6">
                         {% if site_config.email %}
                         <li class="flex items-start gap-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                            <span class="footer-contact-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                                   style="background:rgba(196,133,58,0.15);">
                                 <i class="fa fa-envelope" style="color:#C4853A;font-size:13px;"></i>
                             </span>
@@ -563,7 +732,7 @@
                         {% endif %}
                         {% if site_config.phone_1 %}
                         <li class="flex items-start gap-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                            <span class="footer-contact-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                                   style="background:rgba(196,133,58,0.15);">
                                 <i class="fa fa-phone" style="color:#C4853A;font-size:13px;"></i>
                             </span>
@@ -573,7 +742,7 @@
                         {% endif %}
                         {% if site_config.address %}
                         <li class="flex items-start gap-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                            <span class="footer-contact-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                                   style="background:rgba(196,133,58,0.15);">
                                 <i class="fa fa-map-marker-alt" style="color:#C4853A;font-size:13px;"></i>
                             </span>
@@ -581,7 +750,7 @@
                         </li>
                         {% else %}
                         <li class="flex items-start gap-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                            <span class="footer-contact-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                                   style="background:rgba(196,133,58,0.15);">
                                 <i class="fa fa-map-marker-alt" style="color:#C4853A;font-size:13px;"></i>
                             </span>
@@ -593,25 +762,25 @@
                     <!-- Réseaux sociaux -->
                     <div class="flex gap-2">
                         <a href="#" title="Facebook"
-                           class="flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
+                           class="footer-social flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
                            style="background:rgba(255,255,255,0.08);"
                            onmouseover="this.style.background='#C4853A'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
                             <i class="fab fa-facebook-f text-sm"></i>
                         </a>
                         <a href="#" title="Instagram"
-                           class="flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
+                           class="footer-social flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
                            style="background:rgba(255,255,255,0.08);"
                            onmouseover="this.style.background='#C4853A'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
                             <i class="fab fa-instagram text-sm"></i>
                         </a>
                         <a href="#" title="Twitter / X"
-                           class="flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
+                           class="footer-social flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
                            style="background:rgba(255,255,255,0.08);"
                            onmouseover="this.style.background='#C4853A'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
                             <i class="fab fa-twitter text-sm"></i>
                         </a>
                         <a href="#" title="LinkedIn"
-                           class="flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
+                           class="footer-social flex h-9 w-9 items-center justify-center rounded-full text-brand-300 hover:text-white transition"
                            style="background:rgba(255,255,255,0.08);"
                            onmouseover="this.style.background='#C4853A'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
                             <i class="fab fa-linkedin-in text-sm"></i>
@@ -716,6 +885,31 @@
             }, { once: true });
         });
     });
+
+    // Dark mode toggle
+    (function() {
+        const html = document.documentElement;
+        const btns = [document.getElementById('dark-toggle'), document.getElementById('dark-toggle-mobile')];
+        const icons = [document.getElementById('dark-icon'), document.getElementById('dark-icon-mobile')];
+        const isDark = () => html.classList.contains('dark');
+        const syncIcons = () => icons.forEach(ic => { if (ic) ic.className = isDark() ? 'fa fa-sun' : 'fa fa-moon'; });
+        syncIcons();
+        btns.forEach(btn => {
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                html.classList.add('dark-transition');
+                if (isDark()) {
+                    html.classList.replace('dark', 'light');
+                    localStorage.setItem('kl-theme', 'light');
+                } else {
+                    html.classList.replace('light', 'dark');
+                    localStorage.setItem('kl-theme', 'dark');
+                }
+                syncIcons();
+                setTimeout(() => html.classList.remove('dark-transition'), 350);
+            });
+        });
+    })();
 
     // Transition sortie de page (au clic sur les liens internes)
     document.querySelectorAll("a[href]").forEach(function(link) {
