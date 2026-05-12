@@ -114,7 +114,11 @@ def about(request):
 
 
 def success_page(request):
-    return render(request, 'pages/success.html')
+    ctx = request.session.pop('success_context', {})
+    return render(request, 'pages/success.html', {
+        'course_name': ctx.get('course_name'),
+        'course_id': ctx.get('course_id'),
+    })
 
 
 def redirect_to_default_language(request):

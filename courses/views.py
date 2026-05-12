@@ -410,7 +410,7 @@ def mon_apprentissage(request):
                     'activated_at':         _parse_date(item.get('activated_at')),
                     'expiry_date':          expiry,
                     'lifetime':             expiry is None,
-                    'percentage_completed': item.get('percentage_completed', 0),
+                    'percentage_completed': round(float(item.get('percentage_completed') or 0) * 100),
                 })
         except Exception as e:
             print(f"[mon_apprentissage] Erreur API Thinkific: {e}")

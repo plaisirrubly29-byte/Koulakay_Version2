@@ -1,39 +1,47 @@
-{% extends 'base.html' %}
-{% block head %}
-{% load static %}
-<link rel="stylesheet" type="text/css" href="{% static 'styles/courses_styles.css' %}">
-<link rel="stylesheet" type="text/css" href="{% static 'styles/courses_responsive.css' %}">
-{% endblock %}
-{% block content %}
-
+{% extends "base.html" %}
 {% load static %}
 {% load i18n %}
 
-<div class="home">
-    <div class="home_background_container prlx_parent">
-        <div class="home_background prlx" style="background-image:url({% static 'images/background_1.JPG' %})"></div>
-    </div>
-    <div class="home_content">
-        <h1>{% trans "Payment Successfull " %}</h1>
-    </div>
-</div>
-<!-- Popular -->
-<div class="popular page_section">
-    <div class="container">
-        <div class="row">
-            <div class="col">
-                <div class="section_title text-center">
-                    <h1>{% trans "Notre mission" %}</h1>
-                </div>
-            </div>
-        </div>
-        <div class="text-center">
-            <p><strong>
-                {% blocktrans %}
-                Your payment has been received. Please check your email — you will receive a username, a password, and a link to access your course.
-                {% endblocktrans %}
-            </strong></p>
+{% block title %}{% trans "Paiement confirmé" %} — KouLakay{% endblock %}
+
+{% block content %}
+<section class="max-w-2xl mx-auto px-4 py-20 text-center">
+
+    <!-- Icône succès -->
+    <div class="flex items-center justify-center mb-6">
+        <div class="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
+            <i class="fa fa-check-circle text-5xl text-green-500"></i>
         </div>
     </div>
-</div>
+
+    <!-- Titre -->
+    <h1 class="text-3xl font-bold text-brand-800 mb-3">{% trans "Paiement confirmé !" %}</h1>
+
+    {% if course_name %}
+    <p class="text-lg text-brand-600 mb-2">
+        {% blocktrans with name=course_name %}Votre accès à <strong>{{ name }}</strong> est maintenant actif.{% endblocktrans %}
+    </p>
+    {% else %}
+    <p class="text-lg text-brand-600 mb-2">{% trans "Votre accès au cours est maintenant actif." %}</p>
+    {% endif %}
+
+    <p class="text-sm text-brand-400 mb-10">
+        {% trans "Un email de confirmation vous a été envoyé avec les détails de votre inscription." %}
+    </p>
+
+    <!-- Actions -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="{% url 'mon_apprentissage' %}"
+           class="kl-btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-semibold text-sm">
+            <i class="fa fa-graduation-cap"></i>
+            {% trans "Accéder à mon apprentissage" %}
+        </a>
+        <a href="{% url 'courses' %}"
+           class="btn-kl-secondary inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm">
+            <i class="fa fa-search"></i>
+            {% trans "Explorer d'autres cours" %}
+        </a>
+    </div>
+
+</section>
 {% endblock %}

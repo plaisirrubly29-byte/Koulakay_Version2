@@ -86,7 +86,10 @@ def confirm(request):
             return JsonResponse({'success': False, 'error': 'Payment verification failed with provider'}, status=502)
 
         if verification.get('paid'):
-            return process_successful_payment(transaction, payload)
+            result = process_successful_payment(transaction, payload)
+            if result['success']:
+                return JsonResponse({'success': True, 'message': 'Enrollment activated'}, status=200)
+            return JsonResponse({'success': False, 'error': result['error']}, status=500)
 
         # Paiement non confirmé chez le fournisseur
         transaction.status = Transaction.Status.FAILED
@@ -101,131 +104,86 @@ def confirm(request):
 
 def process_successful_payment(transaction, payload):
     """
-    Traite un paiement réussi:
-    1. Crée l'External Order dans Thinkific
-    2. Crée l'enrollment dans Thinkific
-    3. Crée l'enrollment local
-    4. Met à jour la transaction
+    Traite un paiement réussi. Retourne un dict {'success': bool, 'error': str, 'course_id': int}.
+    N'interrompt JAMAIS l'enrollment à cause d'un échec de l'External Order
+    (l'External Order est du reporting, pas du critique — l'argent est déjà pris).
     """
     try:
-        # Récupérer les informations du payload
         meta_data = transaction.meta_data
         user_data = meta_data.get('user', {})
         course_data = meta_data.get('course', {})
-        
-        user_id = user_data.get('id')
+
+        user_id           = user_data.get('id')
         thinkific_user_id = user_data.get('thinkific_user_id')
-        course_id = course_data.get('course_id')
-        product_id = course_data.get('product_id')
+        course_id         = course_data.get('course_id')
+        product_id        = course_data.get('product_id')
 
-        # Validation des données requises
         if not all([user_id, thinkific_user_id, course_id]):
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing required data in transaction metadata'
-            }, status=400)
+            return {'success': False, 'error': 'Missing required data in transaction metadata', 'course_id': None}
 
-        # Récupérer l'utilisateur
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'error': 'User not found'
-            }, status=404)
+            return {'success': False, 'error': 'User not found', 'course_id': course_id}
 
-        # 1. Créer l'External Order dans Thinkific
-        external_order_created = create_thinkific_external_order(
-            transaction, 
-            thinkific_user_id, 
-            product_id or course_id
-        )
-        
-        if not external_order_created:
-            transaction.status = Transaction.Status.FAILED
-            transaction.save()
-            return JsonResponse({
-                'success': False,
-                'error': 'Failed to create External Order in Thinkific'
-            }, status=500)
+        # 1. External Order — non bloquant : échec loggé mais enrollment continue
+        order_ok = create_thinkific_external_order(transaction, thinkific_user_id, product_id or course_id)
+        if not order_ok:
+            print(f"[KouLakay] External Order échoué pour transaction {transaction.transaction_number} — enrollment quand même créé")
 
-        # 2. Créer l'enrollment dans Thinkific
+        # 2. Enrollment Thinkific
         activated_at = timezone.now()
-        expiry_date = activated_at.replace(year=activated_at.year + 10)  # DB locale seulement
+        expiry_date  = activated_at.replace(year=activated_at.year + 10)  # DB locale seulement
 
-        enrollment_data = {
-            'user_id': thinkific_user_id,
-            'course_id': course_id,
-            'activated_at': activated_at.isoformat(),
-            # Pas d'expiry_date → Thinkific applique la durée configurée par cours
-        }
-        
         try:
-            thinkific_enrollment = thinkific.enrollments.create_enrollment(enrollment_data)
+            thinkific.enrollments.create_enrollment({
+                'user_id':      thinkific_user_id,
+                'course_id':    course_id,
+                'activated_at': activated_at.isoformat(),
+                # Pas d'expiry_date → durée configurée par cours dans Thinkific
+            })
         except Exception as e:
             transaction.status = Transaction.Status.FAILED
             transaction.save()
-            return JsonResponse({
-                'success': False,
-                'error': f'Failed to create enrollment in Thinkific: {str(e)}'
-            }, status=500)
+            return {'success': False, 'error': f'Enrollment Thinkific échoué: {e}', 'course_id': course_id}
 
-        # 3. Créer l'enrollment local
-        enrollment, created = Enrollment.objects.get_or_create(
+        # 3. Enrollment local
+        enrollment, _ = Enrollment.objects.get_or_create(
             user=user,
             thinkific_user_id=thinkific_user_id,
             course_id=course_id,
-            defaults={
-                'activated_at': activated_at,
-                'expiry_date': expiry_date
-            }
+            defaults={'activated_at': activated_at, 'expiry_date': expiry_date},
         )
 
-        # 4. Créer le Payment (lien entre user, enrollment et transaction)
-        payment, _ = Payment.objects.get_or_create(
-            user=user,
-            enrollment=enrollment,
-            transaction=transaction
-        )
+        # 4. Payment record
+        Payment.objects.get_or_create(user=user, enrollment=enrollment, transaction=transaction)
 
-        # 5. Mettre à jour la transaction
-        transaction.status = Transaction.Status.COMPLETED
+        # 5. Transaction COMPLETED
+        transaction.status       = Transaction.Status.COMPLETED
         transaction.completed_at = timezone.now()
         transaction.save()
 
-        # 6. Envoyer l'email de confirmation + reçu PDF
+        # 6. Email de confirmation (non bloquant)
         try:
             send_enrollment_confirmation(
                 user=user,
-                course_name=course_data.get('name', f'Cours #{course_id}'),
+                course_name=course_data.get('course_name') or course_data.get('name') or f'Cours #{course_id}',
                 transaction_number=transaction.transaction_number,
                 amount=transaction.price,
                 currency=transaction.currency,
                 payment_method=transaction.payment_method or 'mobile',
                 activated_at=activated_at,
-                expiry_date=expiry_date,
+                expiry_date=None,  # accès à vie — pas d'expiry affiché dans l'email
             )
-        except Exception as email_err:
-            # L'email ne doit jamais bloquer la confirmation du paiement
-            print(f"[KouLakay] Avertissement email : {email_err}")
+        except Exception as e:
+            print(f"[KouLakay] Email confirmation échoué : {e}")
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Payment processed successfully',
-            'data': {
-                'transaction_number': transaction.transaction_number,
-                'enrollment_id': enrollment.id,
-                'course_id': course_id
-            }
-        }, status=200)
+        return {'success': True, 'course_id': course_id, 'enrollment_id': enrollment.id}
 
     except Exception as e:
         transaction.status = Transaction.Status.FAILED
         transaction.save()
-        return JsonResponse({
-            'success': False,
-            'error': f'Error processing payment: {str(e)}'
-        }, status=500)
+        return {'success': False, 'error': str(e), 'course_id': None}
 
 
 def create_thinkific_external_order(transaction, thinkific_user_id, product_id):
@@ -431,10 +389,18 @@ def payment_return(request):
     course_id = transaction.course_id
 
     if result.get('paid'):
-        # Paiement confirmé → traiter l'inscription (ignore la JsonResponse)
-        process_successful_payment(transaction, {})
-        messages.success(request, "Paiement confirmé ! Votre accès au cours est activé. Un email de confirmation vous a été envoyé.")
-        return redirect('success_page')
+        proc = process_successful_payment(transaction, {})
+        if proc['success']:
+            course_data = transaction.meta_data.get('course', {})
+            request.session['success_context'] = {
+                'course_name': course_data.get('course_name') or course_data.get('name'),
+                'course_id': proc['course_id'],
+            }
+            messages.success(request, "Paiement confirmé ! Votre accès au cours est activé. Un email de confirmation vous a été envoyé.")
+            return redirect('success_page')
+        messages.error(request, f"Erreur lors de l'activation : {proc.get('error', 'Inconnue')}")
+        course_id = proc.get('course_id') or transaction.course_id
+        return redirect('course_details', course_id=course_id) if course_id else redirect('courses')
     elif not result.get('success'):
         messages.error(request, f"Erreur de vérification : {result.get('error', 'Inconnue')}")
         return redirect('course_details', course_id=course_id) if course_id else redirect('courses')
@@ -555,10 +521,19 @@ def stripe_success(request):
     result = stripe_svc.retrieve_payment_intent(payment_intent_id)
 
     if result.get('success') and result.get('status') == 'succeeded':
-        process_successful_payment(transaction, {})
+        proc = process_successful_payment(transaction, {})
         request.session.pop('stripe_transaction_number', None)
-        messages.success(request, _("Paiement confirmé ! Votre accès au cours est activé."))
-        return redirect('success_page')
+        if proc['success']:
+            course_data = transaction.meta_data.get('course', {})
+            request.session['success_context'] = {
+                'course_name': course_data.get('course_name') or course_data.get('name'),
+                'course_id': proc['course_id'],
+            }
+            messages.success(request, _("Paiement confirmé ! Votre accès au cours est activé."))
+            return redirect('success_page')
+        messages.error(request, _(f"Erreur lors de l'activation : {proc.get('error', 'Inconnue')}"))
+        course_id = proc.get('course_id') or transaction.course_id
+        return redirect('course_details', course_id=course_id) if course_id else redirect('courses')
 
     messages.error(request, _("Le paiement n'a pas pu être confirmé. Veuillez réessayer."))
     course_id = transaction.course_id
@@ -689,6 +664,8 @@ def stripe_webhook(request):
             return JsonResponse({'error': 'Transaction not found'}, status=404)
 
         if not transaction.is_completed:
-            process_successful_payment(transaction, {})
+            proc = process_successful_payment(transaction, {})
+            if not proc['success']:
+                print(f"[KouLakay] Webhook: enrollment échoué pour {transaction_number}: {proc['error']}")
 
     return JsonResponse({'received': True})
