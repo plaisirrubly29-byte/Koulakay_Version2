@@ -151,13 +151,13 @@ def process_successful_payment(transaction, payload):
 
         # 2. Créer l'enrollment dans Thinkific
         activated_at = timezone.now()
-        expiry_date = activated_at + timedelta(days=365)  # 1 an d'accès
-        
+        expiry_date = activated_at.replace(year=activated_at.year + 10)  # DB locale seulement
+
         enrollment_data = {
             'user_id': thinkific_user_id,
             'course_id': course_id,
             'activated_at': activated_at.isoformat(),
-            'expiry_date': expiry_date.isoformat()
+            # Pas d'expiry_date → Thinkific applique la durée configurée par cours
         }
         
         try:
