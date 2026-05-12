@@ -254,17 +254,16 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
         from django.utils import timezone as dj_timezone
         
         activated_at = dj_timezone.now()
-        expiry_date = activated_at.replace(year=activated_at.year + 1)
-        
+        local_expiry = activated_at.replace(year=activated_at.year + 10)
+
         enrollment_data = {
             "course_id": course_id,
             "user_id": thinkific_user_id,
             "activated_at": activated_at.isoformat(),
-            "expiry_date": expiry_date.isoformat()
         }
-        
+
         enrollment_result = thinkific.enrollments.create_enrollment(enrollment_data)
-        
+
         if enrollment_result:
             # Créer l'entrée locale
             Enrollment.objects.create(
@@ -272,7 +271,7 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
                 thinkific_user_id=thinkific_user_id,
                 course_id=course_id,
                 activated_at=activated_at,
-                expiry_date=expiry_date,
+                expiry_date=local_expiry,
             )
             
             messages.success(request, f"Vous êtes inscrit au cours {course_name}!")
