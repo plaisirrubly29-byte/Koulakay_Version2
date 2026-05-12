@@ -68,9 +68,9 @@ def course_enrollment_step1(request, course_id):
         # Récupérer le prix et product_id
         course_price = Decimal('0.00')
         product_id = None
-        product_response = thinkific.products.list()
+        product_response = thinkific.products.list(limit=100)
         product_items = product_response.get('items', [])
-        
+
         for p in product_items:
             if p.get('productable_id') == course_id:
                 if p.get('price') is not None:
@@ -265,13 +265,15 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
         enrollment_result = thinkific.enrollments.create_enrollment(enrollment_data)
 
         if enrollment_result:
-            # Créer l'entrée locale
-            Enrollment.objects.create(
+            # Créer l'entrée locale (get_or_create évite les doublons)
+            Enrollment.objects.get_or_create(
                 user=request.user,
                 thinkific_user_id=thinkific_user_id,
                 course_id=course_id,
-                activated_at=activated_at,
-                expiry_date=local_expiry,
+                defaults={
+                    'activated_at': activated_at,
+                    'expiry_date': local_expiry,
+                },
             )
             
             messages.success(request, f"Vous êtes inscrit au cours {course_name}!")
@@ -309,7 +311,7 @@ def mon_apprentissage(request):
     # ── 1 appel : tous les produits pour construire la map prix ──
     price_map = {}  # course_id → price (float)
     try:
-        product_items = thinkific.products.list().get('items', [])
+        product_items = thinkific.products.list(limit=100).get('items', [])
         for p in product_items:
             cid = p.get('productable_id')
             if cid and p.get('price') is not None:
@@ -464,7 +466,7 @@ def home(request):
 
     # Récupérer les détails des produits
     try:
-        product_response = thinkific.products.list()
+        product_response = thinkific.products.list(limit=100)
         product_items = product_response.get('items', [])
     except Exception:
         product_items = []
@@ -545,7 +547,7 @@ def courses(request):
         
     # Produits et catégories
     try:
-        product_response = thinkific.products.list()
+        product_response = thinkific.products.list(limit=100)
         product_items = product_response.get('items', [])
     except Exception:
         product_items = []
@@ -639,7 +641,7 @@ def course_details(request, course_id):
     # Récupérer le prix
     course['price'] = None
     try:
-        product_response = thinkific.products.list()
+        product_response = thinkific.products.list(limit=100)
         product_items = product_response.get('items', [])
         product_id = course.get('product_id')
         
