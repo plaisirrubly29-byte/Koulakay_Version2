@@ -141,6 +141,19 @@
         animation: gradient-shift 9s ease infinite;
     }
 
+    /* dark */
+    html.dark .stat-icon { background: linear-gradient(135deg, #4338CA, #6366F1); }
+    html.dark .force-icon { background: rgba(124,131,245,0.12); }
+    html.dark .force-card:hover .force-icon { background: linear-gradient(135deg, #4338CA, #6366F1); color: white; }
+    html.dark .cta-section {
+        background: linear-gradient(135deg, #0C0D12, #1A1B2E, #252748, #1A1B2E, #0C0D12) !important;
+        background-size: 300% 300% !important;
+    }
+    html.dark .hero-carousel-wrap .owl-dot.active span,
+    html.dark .hero-carousel-wrap .owl-dot:hover span { background: #7C83F5; }
+    html.dark .hero-carousel-wrap .owl-nav button:hover { background: rgba(124,131,245,0.5) !important; }
+    html.dark .course-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
+
     /* ── Typewriter cursor ── */
     .tw-cursor {
         display: inline-block;

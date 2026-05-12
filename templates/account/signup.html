@@ -63,6 +63,25 @@ header, footer {
   margin-top: 0.25rem;
 }
 .helptext ul { list-style: disc; padding-left: 1.25rem; }
+/* dark */
+html.dark body { background: #111216; }
+html.dark #id_first_name, html.dark #id_last_name,
+html.dark #id_email, html.dark #id_password1, html.dark #id_password2 {
+  color: #EDF0F7;
+  background-color: #18191F;
+  border-color: rgba(124,131,245,0.3);
+}
+html.dark #id_first_name:focus, html.dark #id_last_name:focus,
+html.dark #id_email:focus, html.dark #id_password1:focus, html.dark #id_password2:focus {
+  border-color: #7C83F5;
+  box-shadow: 0 0 0 3px rgba(124,131,245,0.18);
+}
+html.dark #id_first_name::placeholder, html.dark #id_last_name::placeholder,
+html.dark #id_email::placeholder, html.dark #id_password1::placeholder, html.dark #id_password2::placeholder {
+  color: rgba(155,163,184,0.45);
+}
+html.dark .helptext { color: #9BA3B8; }
+html.dark .kl-btn { background: linear-gradient(135deg, #4338CA, #6366F1); }
 </style>
 {% endblock %}
 

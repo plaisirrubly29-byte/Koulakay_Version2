@@ -25,6 +25,8 @@
     html.dark .bg-white\/95 { background: rgba(17,18,22,0.97) !important; }
     html.dark .search-wrap:focus-within { border-color: #7C83F5 !important; box-shadow: 0 0 0 3px rgba(124,131,245,0.18) !important; }
     html.dark .course-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
+    .course-link-btn { transition: filter 0.2s; }
+    .course-link-btn:hover { filter: brightness(0.85); }
 </style>
 {% endblock %}
 
@@ -127,8 +129,8 @@
                     <div class="p-4">
                         <h3 class="text-sm font-bold text-brand-800 mb-3 line-clamp-2 min-h-[2.5rem]">{{ c.name }}</h3>
                         <a href="{% url 'course_details' c.id %}"
-                           class="block w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-white transition"
-                           style="background:#7C3D0E;" onmouseover="this.style.background='#5E2D08'" onmouseout="this.style.background='#7C3D0E'">
+                           class="course-link-btn block w-full text-center px-3 py-2 rounded-lg text-sm font-semibold text-white transition"
+                           style="background:#7C3D0E;">
                             {% trans "Voir le cours" %}
                         </a>
                     </div>

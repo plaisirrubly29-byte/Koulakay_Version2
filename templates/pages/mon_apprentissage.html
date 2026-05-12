@@ -37,8 +37,13 @@
         transition: transform 0.28s ease;
     }
     .empty-sec-btn:hover i { transform: translateX(5px); }
+    @keyframes empty-sonar-dark {
+        0%   { box-shadow: 0 0 0 0    rgba(124,131,245,0.5); }
+        70%  { box-shadow: 0 0 0 24px rgba(124,131,245,0); }
+        100% { box-shadow: 0 0 0 0    rgba(124,131,245,0); }
+    }
     /* dark */
-    html.dark .empty-icon-circle { background: #1F2130 !important; }
+    html.dark .empty-icon-circle { background: #1F2130 !important; animation-name: empty-sonar-dark; }
     html.dark .empty-cap { color: #7C83F5; }
 </style>
 {% endblock head %}

@@ -22,6 +22,8 @@
     html.dark .tab-btn.active::after { background: #7C83F5; }
     html.dark .chapter-row:hover { background: #1F2130; }
     html.dark .modal-inner { background: #18191F !important; }
+    .enroll-btn { transition: filter 0.2s; }
+    .enroll-btn:hover { filter: brightness(0.85); }
 </style>
 {% endblock %}
 
@@ -199,10 +201,8 @@
                         </a>
                         {% else %}
                         <button id="enrollBtn"
-                                class="w-full mb-3 px-5 py-3 text-white font-bold rounded-xl transition"
-                                style="background:#7C3D0E;"
-                                onmouseover="this.style.background='#5E2D08'"
-                                onmouseout="this.style.background='#7C3D0E'">
+                                class="enroll-btn w-full mb-3 px-5 py-3 text-white font-bold rounded-xl transition"
+                                style="background:#7C3D0E;">
                             {% if course.price is None or course.price == 0 %}
                                 {% trans "S'inscrire gratuitement" %}
                             {% else %}
@@ -308,10 +308,8 @@
             <form id="enrollForm" method="POST" action="{% url 'course_enrollment' course.id %}" class="flex-1">
                 {% csrf_token %}
                 <button type="submit"
-                        class="w-full px-4 py-3 text-white font-bold rounded-xl transition"
-                        style="background:#7C3D0E;"
-                        onmouseover="this.style.background='#5E2D08'"
-                        onmouseout="this.style.background='#7C3D0E'">
+                        class="enroll-btn w-full px-4 py-3 text-white font-bold rounded-xl transition"
+                        style="background:#7C3D0E;">
                     {% if course.price is None or course.price == 0 %}
                         {% trans "Confirmer" %}
                     {% else %}
