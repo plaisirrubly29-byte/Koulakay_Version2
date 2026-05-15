@@ -342,17 +342,32 @@
                 </span>
                 <h2 class="text-3xl font-bold text-brand-800">{% trans "Explorer par catégorie" %}</h2>
             </div>
-            <div class="flex flex-wrap gap-4 justify-center">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
                 {% for cat in categories %}
                 <a href="{% url 'courses' %}?category={{ cat.slug }}"
-                   class="group flex flex-col items-center gap-3 px-6 py-5 rounded-2xl border-2 border-brand-100 bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-250 min-w-[120px]"
-                   style="--cat-color: {{ cat.color }};"
+                   class="group flex flex-col rounded-2xl border border-brand-100 bg-white overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-250"
                    data-aos="zoom-in" data-aos-delay="{{ forloop.counter0 }}0">
-                    <span class="w-14 h-14 rounded-full flex items-center justify-center text-white text-2xl transition-transform group-hover:scale-110"
-                          style="background: {{ cat.color }};">
-                        <i class="fa {{ cat.icon }}"></i>
-                    </span>
-                    <span class="text-sm font-semibold text-brand-700 text-center leading-tight">{{ cat.name }}</span>
+
+                    <!-- En-tête : image ou couleur + icône -->
+                    {% if cat.image %}
+                    <div class="h-32 overflow-hidden">
+                        <img src="{{ cat.image.url }}" alt="{{ cat.name }}"
+                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                    </div>
+                    {% else %}
+                    <div class="h-32 flex items-center justify-center text-white text-4xl"
+                         style="background: {{ cat.color }};">
+                        <i class="fa {{ cat.icon }} group-hover:scale-110 transition-transform duration-300 inline-block"></i>
+                    </div>
+                    {% endif %}
+
+                    <!-- Texte -->
+                    <div class="p-4 flex flex-col gap-1 flex-1">
+                        <span class="font-bold text-brand-800 text-sm leading-tight">{{ cat.name }}</span>
+                        {% if cat.description %}
+                        <span class="text-xs text-brand-400 leading-snug line-clamp-2 mt-0.5">{{ cat.description }}</span>
+                        {% endif %}
+                    </div>
                 </a>
                 {% endfor %}
             </div>

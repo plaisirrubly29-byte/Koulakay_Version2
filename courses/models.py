@@ -40,7 +40,15 @@ class CourseCategory(models.Model):
     )
     color = models.CharField(
         'Couleur', max_length=20, blank=True, default='#6366F1',
-        help_text='Couleur hex, ex: #6366F1'
+        help_text="Couleur hex, ex: #6366F1 — utilisee si aucune image n'est definie"
+    )
+    image = models.ImageField(
+        'Image', upload_to='categories/', blank=True,
+        help_text="Image d'en-tete de la carte (recommande : 400x220 px)"
+    )
+    description = models.CharField(
+        'Description courte', max_length=200, blank=True,
+        help_text="Affichee sous le nom sur la page d'accueil"
     )
     order = models.PositiveSmallIntegerField('Ordre', default=0)
     is_active = models.BooleanField('Actif', default=True)

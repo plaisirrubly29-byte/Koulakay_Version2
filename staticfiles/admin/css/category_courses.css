@@ -1,0 +1,33 @@
+/* Checkboxes cours Thinkific dans l'admin catégorie */
+.field-selected_courses .helptext {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-style: italic;
+}
+.field-selected_courses ul {
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 14px;
+    background: #fafafa;
+    column-count: 2;
+    column-gap: 24px;
+}
+.field-selected_courses ul li {
+    padding: 4px 0;
+    break-inside: avoid;
+}
+.field-selected_courses ul li label {
+    cursor: pointer;
+    font-weight: normal;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.field-selected_courses ul li input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
