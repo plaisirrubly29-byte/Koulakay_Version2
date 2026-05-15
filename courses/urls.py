@@ -1,9 +1,10 @@
 # courses/urls.py
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
-    path('', views.home, name='home'),
+    path('', RedirectView.as_view(pattern_name='home', permanent=False)),
     path('courses/', views.courses, name='courses'),
     path('course_details/<int:course_id>/', views.course_details, name="course_details"),
     
