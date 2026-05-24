@@ -202,13 +202,21 @@
                         {% else %}
                         <button id="enrollBtn"
                                 class="enroll-btn w-full mb-3 px-5 py-3 text-white font-bold rounded-xl transition"
-                                style="background:#7C3D0E;">
+                                style="background:#7C3D0E;"
+                                data-free="{% if course.price is None or course.price == 0 %}true{% else %}false{% endif %}">
                             {% if course.price is None or course.price == 0 %}
                                 {% trans "S'inscrire gratuitement" %}
                             {% else %}
                                 {% trans "Acheter ce cours" %}
                             {% endif %}
                         </button>
+
+                        <!-- Formulaire caché pour inscription gratuite directe -->
+                        {% if course.price is None or course.price == 0 %}
+                        <form id="freeEnrollForm" method="POST" action="{% url 'course_enrollment' course.id %}" class="hidden">
+                            {% csrf_token %}
+                        </form>
+                        {% endif %}
                         {% endif %}
                     {% else %}
                     <a href="{% url 'account_login' %}?next={% url 'course_details' course.id %}"
@@ -367,7 +375,17 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    if (enrollBtn) enrollBtn.addEventListener('click', openModal);
+    if (enrollBtn) {
+        enrollBtn.addEventListener('click', function() {
+            if (this.dataset.free === 'true') {
+                // Cours gratuit → soumission directe sans modal
+                const freeForm = document.getElementById('freeEnrollForm');
+                if (freeForm) freeForm.submit();
+            } else {
+                openModal();
+            }
+        });
+    }
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 });
