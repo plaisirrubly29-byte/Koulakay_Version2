@@ -35,16 +35,20 @@ class PlopPlopService:
             'refference_id': str(refference_id),
             'montant': math.ceil(float(montant)),
             'payment_method': payment_method,
+            'return_url': self.return_url,
         }
 
         try:
             response = requests.post(
                 f"{self.BASE_URL}/api/paiement-marchand",
-                json=payload,
+                data=payload,
                 timeout=30,
             )
-            response.raise_for_status()
-            data = response.json()
+            try:
+                data = response.json()
+            except Exception:
+                response.raise_for_status()
+                return {'success': False, 'error': 'Réponse invalide du serveur de paiement'}
 
             if data.get('status') is True:
                 return {
@@ -77,11 +81,14 @@ class PlopPlopService:
         try:
             response = requests.post(
                 f"{self.BASE_URL}/api/paiement-verify",
-                json=payload,
+                data=payload,
                 timeout=30,
             )
-            response.raise_for_status()
-            data = response.json()
+            try:
+                data = response.json()
+            except Exception:
+                response.raise_for_status()
+                return {'success': False, 'paid': False, 'error': 'Réponse invalide du serveur de paiement'}
 
             if data.get('status') is True:
                 return {
