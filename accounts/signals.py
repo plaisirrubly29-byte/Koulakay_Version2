@@ -1,3 +1,4 @@
+from allauth.account.signals import email_confirmed
 from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.dispatch import receiver
 
@@ -21,6 +22,15 @@ def _ensure_thinkific_linked(user):
         print(f"[Signal] thinkific_user_id={thinkific_user_id} lié à {user.email}")
     else:
         print(f"[Signal] thinkific_user_id non obtenu pour {user.email}")
+
+
+@receiver(email_confirmed)
+def on_email_confirmed(sender, request, email_address, **kwargs):
+    """
+    Déclenché quand l'utilisateur clique sur le lien de vérification email.
+    C'est ici que le compte Thinkific est créé pour les inscriptions classiques.
+    """
+    _ensure_thinkific_linked(email_address.user)
 
 
 @receiver(social_account_added)

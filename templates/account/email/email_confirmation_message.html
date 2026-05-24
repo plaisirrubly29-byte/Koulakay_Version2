@@ -2,6 +2,17 @@
 {% load account %}
 {% load i18n %}
 
-{% block content %}{% autoescape off %}{% user_display user as user_display %}{% blocktrans with site_name=current_site.name site_domain=current_site.domain %}You're receiving this e-mail because user {{ user_display }} has given your e-mail address to register an account on {{ site_domain }}.
-
-To confirm this is correct, go to {{ activate_url }}{% endblocktrans %}{% endautoescape %}{% endblock %}
+{% block content %}{% autoescape off %}{% user_display user as user_display %}
+Bonjour {{ user_display }},<br><br>
+Merci de vous être inscrit(e) sur <strong>KouLakay</strong> ! Pour activer votre compte, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous.
+<br><br>
+<div style="text-align:center;margin:28px 0;">
+  <a href="{{ activate_url }}"
+     style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#C4853A,#7C3D0E);color:#ffffff;font-weight:bold;font-size:15px;border-radius:8px;text-decoration:none;">
+    Confirmer mon adresse e-mail
+  </a>
+</div>
+<span style="font-size:13px;color:#888;">
+  Ce lien expirera dans 3 jours. Si vous n'avez pas créé de compte sur KouLakay, vous pouvez ignorer cet e-mail.
+</span>
+{% endautoescape %}{% endblock %}

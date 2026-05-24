@@ -13,77 +13,14 @@ thinkific = Thinkific(settings.THINKIFIC['AUTH_TOKEN'], settings.THINKIFIC['SITE
 
 
 class ThinkificSignupView(SignupView):
-    """Vue d'inscription qui crée l'utilisateur dans Thinkific"""
-    
+    """
+    Vue d'inscription — crée uniquement le compte Django local.
+    La synchronisation Thinkific se fait dans accounts/signals.py
+    via le signal email_confirmed, après vérification de l'adresse email.
+    """
+
     def form_valid(self, form):
-        # Récupérer les données du formulaire
-        email = form.cleaned_data.get('email')
-        first_name = form.cleaned_data.get('first_name')
-        last_name = form.cleaned_data.get('last_name')
-        password = form.cleaned_data.get('password1')
-        
-        try:
-            # 1. Tenter de créer l'utilisateur dans Thinkific
-            thinkific_user_data = {
-                'email': email,
-                'first_name': first_name,
-                'last_name': last_name,
-                'password': password,
-                'send_welcome_email': True
-            }
-
-            thinkific_user_id = None
-            try:
-                thinkific_user = thinkific.users.create_user(thinkific_user_data)
-                thinkific_user_id = thinkific_user.get('id') if thinkific_user else None
-            except requests.exceptions.HTTPError as e:
-                # 422 = utilisateur déjà existant dans Thinkific → on récupère son ID
-                if e.response is not None and e.response.status_code == 422:
-                    existing = thinkific.users.list(email=email)
-                    for u in existing.get('items', []):
-                        if u.get('email', '').lower() == email.lower():
-                            thinkific_user_id = u.get('id')
-                            break
-                else:
-                    raise
-
-            if not thinkific_user_id:
-                messages.error(self.request, _("Erreur lors de la création du compte Thinkific."))
-                return self.form_invalid(form)
-
-            # 2. Créer l'utilisateur local Django
-            response = super().form_valid(form)
-
-            # 3. Stocker l'ID Thinkific dans le modèle User
-            self.user.thinkific_user_id = thinkific_user_id
-            self.user.save(update_fields=['thinkific_user_id'])
-
-            messages.success(
-                self.request,
-                _("Votre compte a été créé avec succès ! Vous pouvez maintenant vous connecter.")
-            )
-
-            return response
-
-        except requests.exceptions.HTTPError as e:
-            error_msg = _("Erreur lors de la communication avec Thinkific")
-            try:
-                error_detail = e.response.json()
-                if 'errors' in error_detail:
-                    error_msg = f"{error_msg}: {error_detail['errors']}"
-            except Exception:
-                pass
-
-            messages.error(self.request, error_msg)
-            return self.form_invalid(form)
-            
-        except Exception as e:
-            messages.error(
-                self.request, 
-                _("Une erreur inattendue s'est produite. Veuillez réessayer.")
-            )
-            print(f"Erreur signup Thinkific: {e}")
-            return self.form_invalid(form)
+        return super().form_valid(form)
 
 
 class ThinkificLoginView(LoginView):
