@@ -313,7 +313,8 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
     """Inscrit un utilisateur à un cours gratuit"""
     try:
         from django.utils import timezone as dj_timezone
-        
+        import uuid
+
         activated_at = dj_timezone.now()
         local_expiry = activated_at.replace(year=activated_at.year + 10)
 
@@ -336,13 +337,31 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
                     'expiry_date': local_expiry,
                 },
             )
-            
+
+            # Email de confirmation (non bloquant)
+            try:
+                from payment.email_service import send_enrollment_confirmation
+                ref = f"GRATUIT-{activated_at.strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
+                site_currency = SiteConfig.get().currency
+                send_enrollment_confirmation(
+                    user=request.user,
+                    course_name=course_name,
+                    transaction_number=ref,
+                    amount=0,
+                    currency=site_currency,
+                    payment_method='Accès gratuit',
+                    activated_at=activated_at,
+                    expiry_date=local_expiry,
+                )
+            except Exception as e:
+                print(f"[KouLakay] Email confirmation cours gratuit échoué : {e}")
+
             messages.success(request, f"Vous êtes inscrit au cours {course_name}!")
             return redirect('course_details', course_id=course_id)
         else:
             messages.error(request, _("Erreur lors de l'inscription."))
             return redirect('course_details', course_id=course_id)
-            
+
     except Exception as e:
         messages.error(request, _("Erreur lors de l'inscription."))
         print(f"Erreur enroll free: {e}")
