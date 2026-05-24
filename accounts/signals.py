@@ -1,8 +1,47 @@
 from allauth.account.signals import email_confirmed
 from allauth.socialaccount.signals import social_account_added, social_account_updated
 from django.dispatch import receiver
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.conf import settings
 
 from .adapters import _get_or_create_thinkific_account, _generate_password
+
+
+def _send_welcome_email(user, request):
+    """Envoie un email de bienvenue avec les infos de compte après confirmation."""
+    try:
+        base = request.build_absolute_uri('/').rstrip('/')
+        lang = getattr(request, 'LANGUAGE_CODE', settings.LANGUAGE_CODE)
+
+        context = {
+            'user': user,
+            'courses_url': f"{base}/{lang}/courses/courses/",
+            'reset_url':   f"{base}/{lang}/accounts/password/reset/",
+        }
+
+        subject = render_to_string('account/email/welcome_subject.txt').strip()
+        html    = render_to_string('account/email/welcome_message.html', context)
+        txt     = (
+            f"Bonjour {user.first_name},\n\n"
+            f"Votre compte KouLakay est activé.\n"
+            f"E-mail : {user.email}\n"
+            f"Mot de passe : celui que vous avez choisi à l'inscription.\n\n"
+            f"Modifier mon mot de passe : {context['reset_url']}\n"
+            f"Découvrir les cours : {context['courses_url']}\n"
+        )
+
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=txt,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[user.email],
+        )
+        msg.attach_alternative(html, "text/html")
+        msg.send()
+    except Exception as e:
+        print(f"[Signal] Erreur envoi email de bienvenue pour {user.email}: {e}")
 
 
 def _ensure_thinkific_linked(user):
@@ -28,9 +67,11 @@ def _ensure_thinkific_linked(user):
 def on_email_confirmed(sender, request, email_address, **kwargs):
     """
     Déclenché quand l'utilisateur clique sur le lien de vérification email.
-    C'est ici que le compte Thinkific est créé pour les inscriptions classiques.
+    Crée le compte Thinkific puis envoie l'email de bienvenue avec les credentials.
     """
-    _ensure_thinkific_linked(email_address.user)
+    user = email_address.user
+    _ensure_thinkific_linked(user)
+    _send_welcome_email(user, request)
 
 
 @receiver(social_account_added)

@@ -1,0 +1,34 @@
+{% extends "account/email/base_message.html" %}
+{% load i18n %}
+
+{% block content %}{% autoescape off %}
+Bonjour <strong>{{ user.first_name }}</strong>,<br><br>
+Votre adresse e-mail a été confirmée et votre compte <strong>KouLakay</strong> est maintenant actif. Bienvenue !
+<br><br>
+Voici vos informations de connexion :
+<br><br>
+<table style="width:100%;border-collapse:collapse;font-size:14px;">
+  <tr>
+    <td style="padding:8px 12px;background:#FBF7F4;border-radius:6px 6px 0 0;color:#7C3D0E;font-weight:bold;width:35%;">E-mail</td>
+    <td style="padding:8px 12px;background:#FBF7F4;border-radius:6px 6px 0 0;color:#3D1C04;">{{ user.email }}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;background:#F5EEE8;color:#7C3D0E;font-weight:bold;">Mot de passe</td>
+    <td style="padding:8px 12px;background:#F5EEE8;color:#3D1C04;">Celui que vous avez choisi à l'inscription</td>
+  </tr>
+</table>
+<br>
+<div style="text-align:center;margin:24px 0 16px;">
+  <a href="{{ courses_url }}"
+     style="display:inline-block;padding:13px 28px;background:linear-gradient(135deg,#C4853A,#7C3D0E);color:#ffffff;font-weight:bold;font-size:14px;border-radius:8px;text-decoration:none;margin-right:8px;">
+    Découvrir les cours
+  </a>
+  <a href="{{ reset_url }}"
+     style="display:inline-block;padding:13px 28px;background:#F5EEE8;color:#7C3D0E;font-weight:bold;font-size:14px;border-radius:8px;text-decoration:none;border:1px solid #CFA472;">
+    Modifier mon mot de passe
+  </a>
+</div>
+<span style="font-size:12px;color:#999;">
+  Si vous n'êtes pas à l'origine de cette inscription, contactez-nous à <a href="mailto:support@koulakay.ht" style="color:#C4853A;">support@koulakay.ht</a>.
+</span>
+{% endautoescape %}{% endblock %}
