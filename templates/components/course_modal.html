@@ -43,9 +43,10 @@
 
             <!-- Résumé rapide -->
             <div class="flex gap-3 mb-6">
-                <div class="flex-1 bg-brand-50 rounded-xl p-3 text-center border border-brand-100">
-                    <span class="material-symbols-outlined text-brand-500 text-xl block mb-1">schedule</span>
-                    <p class="text-xs text-brand-500 font-medium">{% trans "Flexible" %}</p>
+                <div id="modalAccessBadge" class="flex-1 rounded-xl p-3 text-center border">
+                    <span id="modalAccessIcon" class="material-symbols-outlined text-xl block mb-1"></span>
+                    <p id="modalAccessLabel" class="text-xs font-bold leading-tight"></p>
+                    <p id="modalAccessSub" class="text-xs font-medium mt-0.5 opacity-70"></p>
                 </div>
                 <div class="flex-1 bg-brand-50 rounded-xl p-3 text-center border border-brand-100">
                     <span class="material-symbols-outlined text-brand-500 text-xl block mb-1">workspace_premium</span>
@@ -92,9 +93,17 @@
     </div>
 </div>
 
+<style>
+@keyframes kl-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(196,133,58,0.0); }
+  50%       { box-shadow: 0 0 0 6px rgba(196,133,58,0.18); }
+}
+.kl-access-limited { animation: kl-pulse-glow 2.4s ease-in-out infinite; }
+</style>
+
 <script>
 // Ouvrir le modal — les URLs sont passées directement depuis les data-attrs du bouton
-function openCourseModal(enrollUrl, detailsUrl, name, desc, price, imgUrl) {
+function openCourseModal(enrollUrl, detailsUrl, name, desc, price, imgUrl, accessDuration) {
     // Textes
     document.getElementById('modalTitle').textContent = name;
     document.getElementById('modalDesc').textContent = desc || '{% trans "Découvrez ce cours exceptionnel conçu par des experts." %}';
@@ -108,6 +117,30 @@ function openCourseModal(enrollUrl, detailsUrl, name, desc, price, imgUrl) {
         : priceFormatted + ' ' + siteCurrency;
     document.getElementById('modalPrice').textContent = priceText;
     document.getElementById('modalPriceBadge').textContent = priceText;
+
+    // Badge accès
+    var badge  = document.getElementById('modalAccessBadge');
+    var icon   = document.getElementById('modalAccessIcon');
+    var label  = document.getElementById('modalAccessLabel');
+    var sub    = document.getElementById('modalAccessSub');
+    badge.classList.remove('kl-access-limited');
+    if (!accessDuration || accessDuration === 'null' || accessDuration === '') {
+        // Accès à vie
+        badge.className = 'flex-1 bg-brand-50 rounded-xl p-3 text-center border border-brand-100';
+        icon.className  = 'material-symbols-outlined text-brand-500 text-xl block mb-1';
+        icon.textContent = 'all_inclusive';
+        label.className = 'text-xs text-brand-700 font-bold leading-tight';
+        label.textContent = '{% trans "Accès à vie" %}';
+        sub.textContent = '';
+    } else {
+        // Accès limité — animation pulse caramel
+        badge.className = 'kl-access-limited flex-1 bg-amber-50 rounded-xl p-3 text-center border border-amber-200';
+        icon.className  = 'material-symbols-outlined text-amber-500 text-xl block mb-1';
+        icon.textContent = 'timer';
+        label.className = 'text-xs text-amber-700 font-bold leading-tight';
+        label.textContent = accessDuration;
+        sub.textContent = "{% trans "d'accès" %}";
+    }
 
     // Image
     var img = document.getElementById('modalImg');

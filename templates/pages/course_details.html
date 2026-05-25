@@ -185,7 +185,9 @@
                     <div class="text-center">
                         <p class="text-brand-300 text-xs mb-1">{% trans "Prix du cours" %}</p>
                         <span class="text-3xl font-bold text-white">{{ course.price }} {{ site_currency }}</span>
-                        <p class="text-gold-400 text-xs mt-1 font-medium">{% trans "Accès à vie inclus" %}</p>
+                        <p class="text-gold-400 text-xs mt-1 font-medium">
+                            {% if course.access_duration %}{{ course.access_duration }} {% trans "d'accès" %}{% else %}{% trans "Accès à vie inclus" %}{% endif %}
+                        </p>
                     </div>
                     {% endif %}
                 </div>
@@ -232,7 +234,7 @@
                         <p class="text-xs font-bold text-brand-600 uppercase tracking-wider mb-3">{% trans "Inclus dans ce cours" %}</p>
                         <div class="flex items-center gap-2 text-sm text-brand-700">
                             <span class="material-symbols-outlined text-green-500" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span>
-                            {% trans "Accès à vie" %}
+                            {% if course.access_duration %}{{ course.access_duration }} {% trans "d'accès" %}{% else %}{% trans "Accès à vie" %}{% endif %}
                         </div>
                         <div class="flex items-center gap-2 text-sm text-brand-700">
                             <span class="material-symbols-outlined text-green-500" style="font-size:16px;font-variation-settings:'FILL' 1;">check_circle</span>

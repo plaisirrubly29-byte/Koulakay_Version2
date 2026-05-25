@@ -27,6 +27,25 @@ def _format_price(raw):
     return str(int(f)) if f == int(f) else f'{f:.2f}'
 
 
+def _format_access_duration(days):
+    """
+    None → None (accès à vie)
+    365 → '1 an', 730 → '2 ans'
+    180 → '6 mois', 30 → '1 mois'
+    14  → '14 jours'
+    """
+    if days is None:
+        return None
+    days = int(days)
+    if days >= 365 and days % 365 == 0:
+        y = days // 365
+        return f"{y} an{'s' if y > 1 else ''}"
+    if days >= 30 and days % 30 == 0:
+        m = days // 30
+        return f"{m} mois"
+    return f"{days} jours"
+
+
 def _sync_user_enrollments(user, request=None):
     """
     Lit les enrollments Thinkific de l'utilisateur et crée les entrées manquantes
@@ -636,6 +655,11 @@ def courses(request):
         for p in product_items
         if p.get('productable_id') and p.get('price') is not None
     }
+    access_map = {
+        p['productable_id']: _format_access_duration(p.get('days_until_expiry'))
+        for p in product_items
+        if p.get('productable_id')
+    }
 
     categories = list(CourseCategory.objects.filter(is_active=True).order_by('order', 'name'))
     course_categories_map = {}
@@ -647,6 +671,7 @@ def courses(request):
         raw_price = price_map.get(cid)
         c['price'] = _format_price(raw_price)
         c['is_free'] = raw_price is None or float(raw_price) == 0
+        c['access_duration'] = access_map.get(cid)  # None = à vie
         c['enroll'] = cid in enrolled_ids
         c['enrollment_count'] = popular_counts.get(cid, 0)
         c['categories'] = course_categories_map.get(cid, [])
@@ -671,18 +696,19 @@ def course_details(request, course_id):
             raise Http404("Le cours demandé n'existe pas.")
         raise
 
-    # Récupérer le prix
+    # Récupérer le prix et la durée d'accès
     course['price'] = None
+    course['access_duration'] = None  # None = accès à vie
     try:
         product_response = thinkific.products.list(limit=100)
         product_items = product_response.get('items', [])
-        product_id = course.get('product_id')
-        
-        if product_id is not None:
-            for p in product_items:
-                if p.get('productable_id') == course_id and p.get('price') is not None:
-                    course['price'] = p['price']
-                    break
+
+        for p in product_items:
+            if p.get('productable_id') == course_id:
+                if p.get('price') is not None:
+                    course['price'] = _format_price(p['price'])
+                course['access_duration'] = _format_access_duration(p.get('days_until_expiry'))
+                break
     except Exception as e:
         print(f"Erreur récupération prix: {e}")
 
