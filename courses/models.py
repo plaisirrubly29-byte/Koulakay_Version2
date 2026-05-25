@@ -98,3 +98,20 @@ class CourseCategoryMembership(models.Model):
 
     def __str__(self):
         return self.course_name_cache or str(self.course_id)
+
+
+class BundleCategoryMembership(models.Model):
+    category = models.ForeignKey(
+        CourseCategory, on_delete=models.CASCADE,
+        related_name='bundle_memberships', verbose_name='Catégorie'
+    )
+    bundle_id = models.IntegerField('ID bundle Thinkific')
+    bundle_name_cache = models.CharField('Nom (cache)', max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = 'Bundle de la catégorie'
+        verbose_name_plural = 'Bundles de la catégorie'
+        unique_together = ('category', 'bundle_id')
+
+    def __str__(self):
+        return self.bundle_name_cache or str(self.bundle_id)

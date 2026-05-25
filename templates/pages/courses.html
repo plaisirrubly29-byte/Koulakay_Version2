@@ -182,9 +182,14 @@
                     {{ bundles|length }}
                 </span>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div id="bundles-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {% for b in bundles %}
                 <div class="bg-white rounded-2xl overflow-hidden shadow-md border-2 border-purple-100"
+                     data-bundle-card
+                     data-name="{{ b.name|lower }}"
+                     data-free="{{ b.is_free|yesno:'true,false' }}"
+                     data-price="{{ b.raw_price|default:0 }}"
+                     data-categories="{{ b.categories|join:',' }}"
                      data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00"
                      style="transition:transform 0.26s cubic-bezier(.34,1.56,.64,1),box-shadow 0.26s;">
 
@@ -414,7 +419,10 @@
     const PILL_INACTIVE = ['bg-white',      'border-brand-200', 'text-brand-600'];
 
     const cards        = Array.from(document.querySelectorAll('[data-course-card]'));
+    const bundleCards  = Array.from(document.querySelectorAll('[data-bundle-card]'));
     const grid         = document.getElementById('courses-grid');
+    const bundleGrid   = document.getElementById('bundles-grid');
+    const bundlesSec   = document.getElementById('bundles-section');
     const noResults    = document.getElementById('no-results');
     const searchInput  = document.getElementById('search-input');
     const clearBtn     = document.getElementById('search-clear');
@@ -477,6 +485,7 @@
                 : '{% trans "Tous les cours" %}';
         }
 
+        // Cours
         let visible = [];
         cards.forEach(card => {
             const nameMatch   = !query || norm(card.dataset.name).includes(norm(query));
@@ -489,8 +498,23 @@
             card.classList.toggle('hidden-card', !show);
             if (show) visible.push(card);
         });
-
         sortCards(visible);
+
+        // Bundles
+        let visibleBundles = [];
+        bundleCards.forEach(card => {
+            const nameMatch   = !query || norm(card.dataset.name).includes(norm(query));
+            const filterMatch = activeFilter === 'all'
+                || (activeFilter === 'free' && card.dataset.free === 'true')
+                || (activeFilter === 'paid' && card.dataset.free === 'false');
+            const catMatch    = !activeCategory
+                || (card.dataset.categories || '').split(',').includes(activeCategory);
+            const show = nameMatch && filterMatch && catMatch;
+            card.classList.toggle('hidden-card', !show);
+            if (show) visibleBundles.push(card);
+        });
+        sortBundleCards(visibleBundles);
+        if (bundlesSec) bundlesSec.classList.toggle('hidden', visibleBundles.length === 0);
 
         const total = cards.length;
         resultLabel.textContent = isFiltering
@@ -499,9 +523,8 @@
 
         noResults.classList.toggle('hidden', visible.length > 0);
 
-        // Force AOS : les cartes visibles après filtrage doivent apparaître
-        // immédiatement même si elles n'ont pas encore "scrollé" dans le viewport.
         visible.forEach(card => card.classList.add('aos-animate'));
+        visibleBundles.forEach(card => card.classList.add('aos-animate'));
         if (typeof AOS !== 'undefined') AOS.refresh();
     }
 
@@ -517,7 +540,7 @@
         }, 180);
     }
 
-    // ── Tri ──────────────────────────────────────────────────────────
+    // ── Tri cours ────────────────────────────────────────────────────
     function sortCards(visible) {
         if (sortMode === 'default') return;
         visible.sort((a, b) => {
@@ -528,6 +551,18 @@
             return 0;
         });
         visible.forEach(card => grid.appendChild(card));
+    }
+
+    // ── Tri bundles (pas de "Populaire") ─────────────────────────────
+    function sortBundleCards(visible) {
+        if (sortMode === 'default' || sortMode === 'popular' || !bundleGrid) return;
+        visible.sort((a, b) => {
+            if (sortMode === 'alpha')      return a.dataset.name.localeCompare(b.dataset.name);
+            if (sortMode === 'price-asc')  return Number(a.dataset.price) - Number(b.dataset.price);
+            if (sortMode === 'price-desc') return Number(b.dataset.price) - Number(a.dataset.price);
+            return 0;
+        });
+        visible.forEach(card => bundleGrid.appendChild(card));
     }
 
     // ── Événements ───────────────────────────────────────────────────
