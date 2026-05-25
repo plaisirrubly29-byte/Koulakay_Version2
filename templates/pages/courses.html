@@ -510,7 +510,7 @@
             const catMatch    = !activeCategory
                 || (card.dataset.categories || '').split(',').includes(activeCategory);
             const show = nameMatch && filterMatch && catMatch;
-            card.classList.toggle('hidden-card', !show);
+            card.classList.toggle('hidden', !show);
             if (show) visibleBundles.push(card);
         });
         sortBundleCards(visibleBundles);
