@@ -67,6 +67,22 @@ class CourseCategory(models.Model):
         super().save(*args, **kwargs)
 
 
+class CourseVisibility(models.Model):
+    """Contrôle quels cours Thinkific sont affichés sur le site."""
+    course_id = models.IntegerField('ID Thinkific', unique=True)
+    course_name_cache = models.CharField('Nom du cours', max_length=255, blank=True)
+    is_visible = models.BooleanField('Visible sur le site', default=True)
+
+    class Meta:
+        verbose_name = 'Visibilité de cours'
+        verbose_name_plural = 'Visibilité des cours'
+        ordering = ['course_name_cache']
+
+    def __str__(self):
+        state = 'visible' if self.is_visible else 'masqué'
+        return f"{self.course_name_cache or self.course_id} ({state})"
+
+
 class CourseCategoryMembership(models.Model):
     category = models.ForeignKey(
         CourseCategory, on_delete=models.CASCADE,

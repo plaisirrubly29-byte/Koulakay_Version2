@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin
+from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 import courses.models as models
 
@@ -95,3 +96,40 @@ class CourseCategoryAdmin(admin.ModelAdmin):
                 course_id=cid,
                 defaults={'course_name_cache': course_map.get(cid, '')},
             )
+
+
+@admin.register(models.CourseVisibility)
+class CourseVisibilityAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/courses/coursevisibility/change_list.html'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        if request.method == 'POST':
+            all_courses = _fetch_thinkific_courses()
+            visible_ids = set(int(x) for x in request.POST.getlist('visible'))
+            for cid, name in all_courses:
+                models.CourseVisibility.objects.update_or_create(
+                    course_id=cid,
+                    defaults={'course_name_cache': name, 'is_visible': cid in visible_ids},
+                )
+            self.message_user(request, f"Visibilité mise à jour pour {len(all_courses)} cours.")
+            return HttpResponseRedirect(request.path)
+
+        all_courses = _fetch_thinkific_courses()
+        visibility_map = {
+            v.course_id: v.is_visible
+            for v in models.CourseVisibility.objects.all()
+        }
+        courses_with_state = [
+            {'id': cid, 'name': name, 'visible': visibility_map.get(cid, True)}
+            for cid, name in all_courses
+        ]
+        extra = extra_context or {}
+        extra['courses_with_state'] = courses_with_state
+        extra['title'] = 'Visibilité des cours'
+        return super().changelist_view(request, extra_context=extra)

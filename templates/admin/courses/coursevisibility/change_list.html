@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<style>
+  .visibility-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .visibility-table th { background: #417690; color: white; padding: 10px 14px; text-align: left; font-size: 13px; }
+  .visibility-table td { padding: 10px 14px; border-bottom: 1px solid #e8e8e8; font-size: 13px; vertical-align: middle; }
+  .visibility-table tr:hover td { background: #f8f8f8; }
+  .visibility-table input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #417690; }
+  .badge-visible   { background: #d4edda; color: #155724; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-hidden    { background: #f8d7da; color: #721c24; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .save-bar { position: sticky; top: 0; z-index: 10; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 12px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; }
+  .save-bar p { margin: 0; font-size: 13px; color: #856404; }
+  .btn-select-all { font-size: 12px; color: #417690; cursor: pointer; text-decoration: underline; background: none; border: none; margin-right: 12px; }
+  .btn-deselect-all { font-size: 12px; color: #ba2121; cursor: pointer; text-decoration: underline; background: none; border: none; }
+</style>
+
+<div class="save-bar">
+  <p>
+    <strong>{% trans "Cochez" %}</strong> {% trans "les cours à afficher sur le site — décochez pour les masquer." %}
+  </p>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button type="button" class="btn-select-all" onclick="setAll(true)">{% trans "Tout cocher" %}</button>
+    <button type="button" class="btn-deselect-all" onclick="setAll(false)">{% trans "Tout décocher" %}</button>
+    <input type="submit" form="visibility-form" value="{% trans 'Enregistrer' %}"
+           class="default" style="margin:0;">
+  </div>
+</div>
+
+<form id="visibility-form" method="post">
+  {% csrf_token %}
+  {% if courses_with_state %}
+    <table class="visibility-table">
+      <thead>
+        <tr>
+          <th style="width:44px;">{% trans "Visible" %}</th>
+          <th>{% trans "Nom du cours" %}</th>
+          <th style="width:80px;">{% trans "ID" %}</th>
+          <th style="width:90px;">{% trans "Statut" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for course in courses_with_state %}
+        <tr>
+          <td style="text-align:center;">
+            <input type="checkbox" name="visible" value="{{ course.id }}"
+                   {% if course.visible %}checked{% endif %}
+                   onchange="updateBadge(this)">
+          </td>
+          <td>{{ course.name }}</td>
+          <td style="color:#888;">{{ course.id }}</td>
+          <td>
+            <span class="badge {% if course.visible %}badge-visible{% else %}badge-hidden{% endif %}"
+                  id="badge-{{ course.id }}">
+              {% if course.visible %}Visible{% else %}Masqué{% endif %}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p style="color:#888;margin-top:24px;">
+      {% trans "Aucun cours disponible dans Thinkific." %}
+    </p>
+  {% endif %}
+</form>
+
+<script>
+function updateBadge(checkbox) {
+  const id = checkbox.value;
+  const badge = document.getElementById('badge-' + id);
+  if (checkbox.checked) {
+    badge.textContent = 'Visible';
+    badge.className = 'badge badge-visible';
+  } else {
+    badge.textContent = 'Masqué';
+    badge.className = 'badge badge-hidden';
+  }
+}
+function setAll(state) {
+  document.querySelectorAll('input[name="visible"]').forEach(cb => {
+    cb.checked = state;
+    updateBadge(cb);
+  });
+}
+</script>
+{% endblock %}

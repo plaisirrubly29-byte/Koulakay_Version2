@@ -10,7 +10,7 @@ from django.db.models import Count
 import requests
 
 from .monkey_patch.patch_thinkific import ThinkificExtend
-from .models import Enrollment, CourseTranslation, CourseCategory, CourseCategoryMembership
+from .models import Enrollment, CourseTranslation, CourseCategory, CourseCategoryMembership, CourseVisibility
 from payment.models import Transaction
 from payment.exchange_service import convert_to_htg
 from pages.models import SiteConfig
@@ -582,6 +582,12 @@ def courses(request):
         courses_items = thinkific.courses.list(limit=100).get('items', [])
     except Exception:
         courses_items = []
+
+    hidden_ids = set(
+        CourseVisibility.objects.filter(is_visible=False).values_list('course_id', flat=True)
+    )
+    if hidden_ids:
+        courses_items = [c for c in courses_items if c.get('id') not in hidden_ids]
 
     try:
         product_items = thinkific.products.list(limit=100).get('items', [])
