@@ -4,12 +4,25 @@
 
 {% block title %}{% trans "Contact" %} — {{ site_config.site_name }}{% endblock %}
 
+{% block head %}
+<style>
+    .hero-contact {
+        min-height: 280px;
+        background: linear-gradient(160deg,rgba(61,28,4,0.85),rgba(124,61,14,0.7)),
+                    url('{% static 'images/background_1.JPG' %}') center/cover;
+    }
+    html.dark .hero-contact {
+        background: linear-gradient(160deg,rgba(109,40,217,0.6),rgba(76,29,149,0.75)),
+                    url('{% static 'images/background_1.JPG' %}') center/cover;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="min-h-screen">
 
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-xl mx-4 mt-6"
-         style="min-height:280px; background: linear-gradient(160deg,rgba(61,28,4,0.85),rgba(124,61,14,0.7)), url('{% static 'images/background_1.JPG' %}') center/cover;">
+    <div class="hero-contact relative overflow-hidden rounded-xl mx-4 mt-6">
         <div class="absolute inset-0 flex flex-col justify-end p-8 md:p-12" data-aos="fade-up">
             <h1 class="text-white text-4xl md:text-5xl font-extrabold tracking-tight">
                 {% trans "Contactez-nous" %}

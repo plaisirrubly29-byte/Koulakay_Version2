@@ -40,6 +40,12 @@
     }
     .cta-about { background: linear-gradient(135deg,#3D1C04 0%,#7C3D0E 60%,#9B5116 100%); }
     html.dark .cta-about { background: linear-gradient(135deg, #09071a 0%, #130e29 60%, #1e1033 100%); }
+    html.dark .hero-about {
+        background: linear-gradient(rgba(109,40,217,0.55), rgba(76,29,149,0.72)),
+                    url("{% static 'images/background_1.JPG' %}");
+        background-size: cover;
+        background-position: center;
+    }
 </style>
 {% endblock %}
 
