@@ -565,6 +565,12 @@ def home(request):
     except Exception:
         product_items = []
 
+    access_map_home = {
+        p['productable_id']: _format_access_duration(p.get('days_until_expiry'))
+        for p in product_items
+        if p.get('productable_id')
+    }
+
     enrolled_ids = set()
     if request.user.is_authenticated:
         enrolled_ids = set(
@@ -584,6 +590,7 @@ def home(request):
                 )
                 course_data['price'] = _format_price(raw_price)
                 course_data['is_free'] = raw_price is None or float(raw_price) == 0
+                course_data['access_duration'] = access_map_home.get(course_id, '6 mois')
                 course_data['enroll'] = course_id in enrolled_ids
                 popular_courses.append(course_data)
             except Exception as e:
@@ -602,6 +609,7 @@ def home(request):
                 )
                 course_data['price'] = _format_price(raw_price)
                 course_data['is_free'] = raw_price is None or float(raw_price) == 0
+                course_data['access_duration'] = access_map_home.get(course_id, '6 mois')
                 course_data['enroll'] = course_id in enrolled_ids
                 popular_courses.append(course_data)
                 if len(popular_courses) >= 6:

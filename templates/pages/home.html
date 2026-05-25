@@ -426,7 +426,7 @@
                             </a>
                             {% else %}
                             <button type="button"
-                                    onclick="openCourseModal('{% url 'course_enrollment' c.id %}','{% url 'course_details' c.id %}','{{ c.name|escapejs }}','{{ c.description|default:''|escapejs }}','{{ c.price|default:0 }}','{{ c.course_card_image_url|default:'' }}')"
+                                    onclick="openCourseModal('{% url 'course_enrollment' c.id %}','{% url 'course_details' c.id %}','{{ c.name|escapejs }}','{{ c.description|default:''|escapejs }}','{{ c.price|default:0 }}','{{ c.course_card_image_url|default:'' }}','{{ c.access_duration|default:'' }}')"
                                     class="flex-1 kl-btn-cta px-4 py-2 text-sm font-semibold rounded-lg">
                                 {% trans "S'inscrire" %}
                             </button>
