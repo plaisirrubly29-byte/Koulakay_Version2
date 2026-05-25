@@ -15,7 +15,7 @@ def home(request):
     }
 
     # ── Imports locaux pour éviter les imports circulaires ──
-    from courses.models import Enrollment, CourseCategory
+    from courses.models import Enrollment, CourseCategory, CourseVisibility
     from courses.views import thinkific, apply_course_translations
 
     try:
@@ -44,6 +44,11 @@ def home(request):
     # ── Cours populaires ──
     popular_courses = []
 
+    # Cours masqués par l'admin (CourseVisibility)
+    hidden_ids = set(
+        CourseVisibility.objects.filter(is_visible=False).values_list('course_id', flat=True)
+    )
+
     try:
         product_response = thinkific.products.list()
         product_items = product_response.get('items', [])
@@ -53,6 +58,7 @@ def home(request):
     try:
         top_qs = (
             Enrollment.objects
+            .exclude(course_id__in=hidden_ids)
             .values('course_id')
             .annotate(num_enrollments=Count('course_id'))
             .order_by('-num_enrollments')[:6]
@@ -67,6 +73,8 @@ def home(request):
 
         if top_ids:
             for course_id in top_ids:
+                if course_id in hidden_ids:
+                    continue
                 try:
                     c = thinkific.courses.retrieve_course(id=course_id)
                     c['enrollment_count'] = next(
@@ -83,6 +91,8 @@ def home(request):
         else:
             for c in thinkific.courses.list(limit=6).get('items', []):
                 cid = c.get('id')
+                if cid in hidden_ids:
+                    continue
                 c['enrollment_count'] = 0
                 c['price'] = next(
                     (p['price'] for p in product_items
