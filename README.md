@@ -20,6 +20,7 @@
 - [Modèles de données](#modèles-de-données)
 - [Internationalisation](#internationalisation)
 - [Administration](#administration)
+- [Notes importantes](#notes-importantes)
 
 ---
 
@@ -103,16 +104,27 @@ Railway détecte le push
     - Email de credentials envoyé → le user peut aussi se connecter email/password
   - **Sign in Google (utilisateur existant) :**
     - Si `thinkific_user_id` absent : recherche dans Thinkific par email, crée si inexistant, lie l'ID dans Django
-- Création automatique du compte **Thinkific** à l'inscription (email ou Google)
-- SSO transparent vers Thinkific (`/accounts/thinkific-sso/`)
-- Réinitialisation de mot de passe par email (Resend) — page stylée + email HTML branded
 
 ### Catalogue de cours
 - Affichage des cours depuis l'**API Thinkific** (paginé)
-- Filtrage par collection / catégorie
+- Filtrage par **catégorie** (modèle `CourseCategory`, affiché sur la page d'accueil et dans le catalogue)
 - Recherche textuelle
-- Cours populaires basés sur les inscriptions locales
 - Bouton **Continuer** si déjà inscrit, **S'inscrire** sinon
+- Visibilité admin par cours via `CourseVisibility` (masquer/afficher sans supprimer)
+
+### Bundles (Offres Groupées)
+
+Les bundles permettent d'acheter plusieurs cours en un seul paiement.
+
+- **Catalogue :** les bundles Thinkific apparaissent dans la liste des cours avec un badge "Offre groupée"
+- **Paiement :** un bundle génère une seule `Transaction` avec `meta_data.bundle` contenant `bundle_id`, `bundle_name`, `bundle_course_ids`
+- **Inscription automatique :** après paiement, chaque cours du bundle est inscrit séparément dans Thinkific
+- **Mon Apprentissage :**
+  - Section "Mes Offres Groupées" : cartes expansibles listant les cours inclus avec barre de progression moyenne
+  - Les cours d'un bundle affichent un badge "Bundle" violet sur leur carte individuelle
+- **Email de confirmation :** wording adapté — "Offre groupée" / "Accédez à vos cours..." au lieu du singulier
+
+> **Note technique :** l'appel `GET /bundles/{id}` est fait directement via `requests` car le SDK Thinkific a un bug d'URL sur cet endpoint.
 
 ### Paiement
 
@@ -127,13 +139,23 @@ Railway détecte le push
 - ID de transaction unique format `KL-YYYYMMDD-XXXXXXXX`
 - Page Stripe dédiée avec résumé de commande
 - Webhooks Stripe et PlopPlop pour confirmation asynchrone
+- Email de confirmation avec PDF reçu (ReportLab) — adapté pour cours ou bundle
 
-### Mon apprentissage
+### Mon Apprentissage
 - Liste des cours via `enrollments.list()` Thinkific (1 seul appel API)
 - Enrichissement automatique avec photo, description, slug
 - Barre de progression et pourcentage complété
 - Dates d'inscription et d'expiration d'accès
+- Section "Mes Offres Groupées" avec progression agrégée par bundle
 - Accès direct au cours via SSO Thinkific
+
+### Mode Sombre
+- Activé/désactivé via bouton dans le header (stocké en `localStorage`)
+- Palette violet : `#7c3aed` (accent) · `#6d28d9` (dark) · `#5b21b6` (deep) · `#a78bfa` (text)
+- Fond body : `#0d0b17` + texture dot-grid violet subtile
+- Cartes et conteneurs : `#160e2a` (sombre, pas blanc)
+- Header : glassmorphisme (`backdrop-filter: blur(20px)`)
+- Overlay violet semi-transparent sur les images hero des pages À propos et Contact
 
 ### Multilingue
 - **4 langues :** Français · English · Español · Kreyòl Ayisyen
@@ -147,6 +169,8 @@ Railway détecte le push
 - Configuration du site (currency, coordonnées, réseaux sociaux — singleton)
 - Suivi des transactions avec statut coloré
 - Gestion des inscriptions et traductions de cours
+- **Catégories de cours** : nom, description, image, ordre d'affichage, sélection des cours inclus
+- **Visibilité des cours** : masquer/afficher des cours dans le catalogue et la page d'accueil
 - Import / export CSV (django-import-export)
 
 ---
@@ -176,9 +200,12 @@ Django_KouLakay/
 │
 ├── courses/                    # Cours & inscriptions
 │   ├── models.py               # Enrollment, CourseTranslation
+│   │                           # CourseCategory, CourseCategoryMembership
+│   │                           # BundleCategoryMembership, CourseVisibility
 │   ├── views.py                # courses, course_details, mon_apprentissage
 │   │                           # course_enrollment_step1, apply_course_translations
 │   ├── admin.py                # EnrollmentAdmin, CourseTranslationAdmin
+│   │                           # CourseCategoryAdmin (avec sélecteur de cours)
 │   └── monkey_patch/           # Extensions SDK Thinkific
 │       ├── patch_thinkific.py  # ThinkificExtend (+ instructors, collections)
 │       ├── instructor.py
@@ -187,16 +214,22 @@ Django_KouLakay/
 ├── payment/                    # Paiements
 │   ├── models.py               # Transaction, Payment
 │   ├── views.py                # stripe_checkout, payment_return, webhooks
+│   │                           # bundle_payment_return (bundles)
 │   ├── plopplop_service.py     # Client PlopPlop (MonCash / NatCash / Kashpaw)
 │   ├── stripe_service.py       # Client Stripe (PaymentIntent)
 │   ├── exchange_service.py     # Conversion devises (USD ↔ HTG, cache 1h)
-│   ├── email_service.py        # Emails de confirmation (Resend)
+│   ├── email_service.py        # Emails de confirmation avec PDF (Resend)
+│   │                           # is_bundle flag → wording adapté
 │   └── urls.py
 │
 ├── templates/                  # Templates HTML
-│   ├── base.html               # Layout principal (header, footer, nav)
+│   ├── base.html               # Layout principal (header, footer, nav, dark mode CSS)
 │   ├── pages/                  # home, courses, course_details, payment…
+│   │                           # mon_apprentissage (bundles + badges)
 │   ├── account/                # login, signup, password_reset…
+│   │   └── messages/
+│   │       └── logged_in.txt   # Intentionnellement vide (supprime le toast allauth)
+│   ├── emails/                 # enrollment_confirmation.html (is_bundle aware)
 │   └── components/             # course_modal, etc.
 │
 ├── locale/                     # Fichiers de traduction
@@ -263,7 +296,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 
 # ── Base de données ─────────────────────────────────────────────────────────
 # En production Railway injecte DATABASE_URL automatiquement.
-# En local, laisser vide pour utiliser SQLite.
+# En local, laisser commenté pour utiliser SQLite (NE PAS pointer vers la DB prod).
 # DATABASE_URL=postgresql://user:password@host:5432/dbname
 
 # ── Thinkific ───────────────────────────────────────────────────────────────
@@ -425,11 +458,14 @@ Copier **Client ID** et **Client Secret** → variables Railway `GOOGLE_CLIENT_I
 □ Inscription → compte Thinkific créé automatiquement
 □ Paiement MonCash → inscription cours → email de confirmation reçu
 □ Paiement Stripe → inscription cours → email de confirmation reçu
+□ Paiement bundle → tous les cours inscrits → email "Offre groupée" reçu
 □ Page "Mon apprentissage" → cours avec photos et progression visibles
+□ Page "Mon apprentissage" → section "Mes Offres Groupées" si bundle acheté
 □ SSO Thinkific                     → fonctionne
 □ Changement de langue FR/EN/ES/HT  → fonctionne
 □ SiteConfig rempli dans l'admin    → currency, coordonnées, réseaux sociaux
 □ HeroSlides configurés (toutes langues)
+□ Catégories configurées dans l'admin → visibles sur la page d'accueil
 □ Backups PostgreSQL activées       → Railway → PostgreSQL → Backups
 ```
 
@@ -445,7 +481,9 @@ Copier **Client ID** et **Client Secret** → variables Railway `GOOGLE_CLIENT_I
   - `users.list()` · `products.list()`
   - `collections.list_collections()`
   - `instructors.retrieve_instructor(id)`
+  - `GET /bundles/{id}` via `requests` direct (bug SDK sur cet endpoint)
 - **SSO :** JWT signé avec `THINKIFIC_SECRET_KEY` — redirige l'utilisateur directement sur Thinkific sans re-connexion
+- **Inscriptions bundles :** pas d'`expiry_date` envoyé → accès à vie
 
 ### PlopPlop (Mobile Money Haïti)
 - **Base URL :** `https://plopplop.solutionip.app`
@@ -521,20 +559,54 @@ description  TextField      (description traduite)
 # Contrainte : unique_together (course_id, language)
 ```
 
+### `CourseCategory` (courses)
+```
+name         CharField
+slug         SlugField      (auto-généré)
+description  TextField      (optionnel)
+image        ImageField     (optionnel · affiché sur la page d'accueil)
+order        PositiveSmallIntegerField
+is_active    BooleanField
+# Relation M2M vers les cours Thinkific via CourseCategoryMembership
+```
+
+### `CourseCategoryMembership` (courses)
+```
+category    ForeignKey(CourseCategory)
+course_id   IntegerField   (ID Thinkific)
+# Table de liaison : un cours peut appartenir à plusieurs catégories
+```
+
+### `BundleCategoryMembership` (courses)
+```
+category    ForeignKey(CourseCategory)
+bundle_id   IntegerField   (ID bundle Thinkific)
+# Table de liaison : un bundle peut appartenir à plusieurs catégories
+```
+
+### `CourseVisibility` (courses)
+```
+course_id   IntegerField   unique — (ID Thinkific)
+is_visible  BooleanField   default=True
+# Masquer un cours du catalogue et de la page d'accueil sans le supprimer de Thinkific
+```
+
 ### `Transaction` (payment)
 ```
-transaction_number       CharField    KL-YYYYMMDD-XXXXXXXX (unique · index)
-user                     ForeignKey(User)
-price                    DecimalField
-currency                 CharField    USD · HTG · EUR · GBP
-status                   CharField    PENDING · COMPLETED · FAILED · CANCELLED · REFUNDED
-payment_method           CharField    credit_card · moncash · natcash · kashpaw
-external_transaction_id  CharField    (ID Stripe ou PlopPlop)
+transaction_number           CharField    KL-YYYYMMDD-XXXXXXXX (unique · index)
+user                         ForeignKey(User)
+price                        DecimalField
+currency                     CharField    USD · HTG · EUR · GBP
+status                       CharField    PENDING · COMPLETED · FAILED · CANCELLED · REFUNDED
+payment_method               CharField    credit_card · moncash · natcash · kashpaw
+external_transaction_id      CharField    (ID Stripe ou PlopPlop)
 thinkific_external_order_id  IntegerField
-meta_data                JSONField    { course: { id, name, product_id }, user: { id, email, thinkific_user_id } }
-created_at               DateTimeField (auto)
-updated_at               DateTimeField (auto)
-completed_at             DateTimeField (null)
+meta_data                    JSONField
+  # Cours : { course: { id, name, product_id }, user: { id, email, thinkific_user_id } }
+  # Bundle : { bundle: { bundle_id, bundle_name, bundle_course_ids: [...] }, user: {...} }
+created_at                   DateTimeField (auto)
+updated_at                   DateTimeField (auto)
+completed_at                 DateTimeField (null)
 ```
 
 ---
@@ -575,6 +647,8 @@ Accès : `https://koulakay.ht/fr/admin/`
 |---|---|
 | **Hero Slides** | Diaporama page d'accueil — titre, sous-titre, CTA par langue |
 | **Site Config** | Currency, coordonnées, réseaux sociaux, footer (singleton) |
+| **Course Categories** | Catégories avec image, description, ordre et sélection des cours inclus (cases à cocher) |
+| **Course Visibility** | Masquer/afficher des cours Thinkific dans le catalogue et la page d'accueil |
 | **Enrollments** | Inscriptions aux cours avec dates et ID Thinkific |
 | **Course Translations** | Noms et descriptions des cours Thinkific par langue |
 | **Transactions** | Paiements avec statut coloré, filtre par méthode/statut/date |
@@ -594,6 +668,19 @@ Accès : `https://koulakay.ht/fr/admin/`
 | Thinkific | Basic | ~$39 |
 | Domaine koulakay.ht | — | ~$1 |
 | **Total** | | **~$45** |
+
+---
+
+## Notes importantes
+
+| Sujet | Note |
+|---|---|
+| **DB locale** | Ne jamais définir `DATABASE_URL` dans `.env` local — utiliser SQLite uniquement. Modifier la DB de production depuis l'environnement local est interdit. |
+| **Cours Populaires** | La section "Cours Populaires" dans `templates/pages/home.html` est commentée (`{% comment %}`). Le code est intact. Pour réactiver : retirer les balises `{% comment %}` et `{% endcomment %}`. |
+| **Toast allauth** | `templates/account/messages/logged_in.txt` est intentionnellement vide — supprime le message "connecté en tant que X" après connexion. Ne pas ajouter de contenu. |
+| **Bundles SDK** | `GET /bundles/{id}` est appelé via `requests` directement (pas le SDK Thinkific) car le SDK a un bug d'URL sur cet endpoint. |
+| **Inscriptions** | Ne pas envoyer `expiry_date` aux inscriptions Thinkific → accès à vie. |
+| **Mode sombre** | Les cartes et conteneurs restent sombres (`#160e2a`) en dark mode — pas de cartes blanches. |
 
 ---
 
