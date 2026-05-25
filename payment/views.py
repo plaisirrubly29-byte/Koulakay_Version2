@@ -104,86 +104,144 @@ def confirm(request):
 
 def process_successful_payment(transaction, payload):
     """
-    Traite un paiement réussi. Retourne un dict {'success': bool, 'error': str, 'course_id': int}.
-    N'interrompt JAMAIS l'enrollment à cause d'un échec de l'External Order
-    (l'External Order est du reporting, pas du critique — l'argent est déjà pris).
+    Traite un paiement réussi (cours ou bundle).
+    Retourne un dict {'success': bool, 'error': str, 'course_id': int|None, 'bundle_id': int|None}.
+    N'interrompt JAMAIS l'enrollment à cause d'un échec de l'External Order.
     """
     try:
         meta_data = transaction.meta_data
         user_data = meta_data.get('user', {})
+        bundle_data = meta_data.get('bundle')
         course_data = meta_data.get('course', {})
 
         user_id           = user_data.get('id')
         thinkific_user_id = user_data.get('thinkific_user_id')
-        course_id         = course_data.get('course_id')
-        product_id        = course_data.get('product_id')
 
-        if not all([user_id, thinkific_user_id, course_id]):
-            return {'success': False, 'error': 'Missing required data in transaction metadata', 'course_id': None}
+        if not all([user_id, thinkific_user_id]):
+            return {'success': False, 'error': 'Missing user data in transaction metadata', 'course_id': None, 'bundle_id': None}
 
         try:
             user = User.objects.get(pk=user_id)
         except User.DoesNotExist:
-            return {'success': False, 'error': 'User not found', 'course_id': course_id}
+            return {'success': False, 'error': 'User not found', 'course_id': None, 'bundle_id': None}
 
-        # 1. External Order — non bloquant : échec loggé mais enrollment continue
-        order_ok = create_thinkific_external_order(transaction, thinkific_user_id, product_id or course_id)
-        if not order_ok:
-            print(f"[KouLakay] External Order échoué pour transaction {transaction.transaction_number} — enrollment quand même créé")
-
-        # 2. Enrollment Thinkific
         activated_at = timezone.now()
-        expiry_date  = activated_at.replace(year=activated_at.year + 10)  # DB locale seulement
+        expiry_date  = activated_at.replace(year=activated_at.year + 10)
 
-        try:
-            thinkific.enrollments.create_enrollment({
-                'user_id':      thinkific_user_id,
-                'course_id':    course_id,
-                'activated_at': activated_at.isoformat(),
-                # Pas d'expiry_date → durée configurée par cours dans Thinkific
-            })
-        except Exception as e:
-            transaction.status = Transaction.Status.FAILED
+        if bundle_data:
+            # ── Bundle : inscrire à tous les cours ──
+            bundle_id        = bundle_data.get('bundle_id')
+            bundle_name      = bundle_data.get('bundle_name', f'Bundle #{bundle_id}')
+            bundle_course_ids = bundle_data.get('bundle_course_ids', [])
+            product_id       = bundle_data.get('product_id')
+
+            if not bundle_course_ids:
+                return {'success': False, 'error': 'No course IDs in bundle metadata', 'course_id': None, 'bundle_id': bundle_id}
+
+            order_ok = create_thinkific_external_order(transaction, thinkific_user_id, product_id or bundle_id)
+            if not order_ok:
+                print(f"[KouLakay] External Order échoué pour bundle {transaction.transaction_number}")
+
+            first_enrollment = None
+            for cid in bundle_course_ids:
+                try:
+                    thinkific.enrollments.create_enrollment({
+                        'user_id':      thinkific_user_id,
+                        'course_id':    cid,
+                        'activated_at': activated_at.isoformat(),
+                    })
+                    enrollment, _ = Enrollment.objects.get_or_create(
+                        user=user,
+                        thinkific_user_id=thinkific_user_id,
+                        course_id=cid,
+                        defaults={'activated_at': activated_at, 'expiry_date': expiry_date},
+                    )
+                    if first_enrollment is None:
+                        first_enrollment = enrollment
+                except Exception as e:
+                    print(f"[bundle] Erreur inscription cours {cid}: {e}")
+
+            if first_enrollment is None:
+                transaction.status = Transaction.Status.FAILED
+                transaction.save()
+                return {'success': False, 'error': 'Tous les enrollments bundle ont échoué', 'course_id': None, 'bundle_id': bundle_id}
+
+            Payment.objects.get_or_create(user=user, enrollment=first_enrollment, transaction=transaction)
+            transaction.status       = Transaction.Status.COMPLETED
+            transaction.completed_at = timezone.now()
             transaction.save()
-            return {'success': False, 'error': f'Enrollment Thinkific échoué: {e}', 'course_id': course_id}
 
-        # 3. Enrollment local
-        enrollment, _ = Enrollment.objects.get_or_create(
-            user=user,
-            thinkific_user_id=thinkific_user_id,
-            course_id=course_id,
-            defaults={'activated_at': activated_at, 'expiry_date': expiry_date},
-        )
+            try:
+                send_enrollment_confirmation(
+                    user=user,
+                    course_name=bundle_name,
+                    transaction_number=transaction.transaction_number,
+                    amount=transaction.price,
+                    currency=transaction.currency,
+                    payment_method=transaction.payment_method or 'mobile',
+                    activated_at=activated_at,
+                    expiry_date=None,
+                )
+            except Exception as e:
+                print(f"[KouLakay] Email confirmation bundle échoué : {e}")
 
-        # 4. Payment record
-        Payment.objects.get_or_create(user=user, enrollment=enrollment, transaction=transaction)
+            return {'success': True, 'course_id': None, 'bundle_id': bundle_id, 'enrollment_id': first_enrollment.id}
 
-        # 5. Transaction COMPLETED
-        transaction.status       = Transaction.Status.COMPLETED
-        transaction.completed_at = timezone.now()
-        transaction.save()
+        else:
+            # ── Cours unique (logique existante) ──
+            course_id  = course_data.get('course_id')
+            product_id = course_data.get('product_id')
 
-        # 6. Email de confirmation (non bloquant)
-        try:
-            send_enrollment_confirmation(
+            if not course_id:
+                return {'success': False, 'error': 'Missing course_id in transaction metadata', 'course_id': None, 'bundle_id': None}
+
+            order_ok = create_thinkific_external_order(transaction, thinkific_user_id, product_id or course_id)
+            if not order_ok:
+                print(f"[KouLakay] External Order échoué pour transaction {transaction.transaction_number}")
+
+            try:
+                thinkific.enrollments.create_enrollment({
+                    'user_id':      thinkific_user_id,
+                    'course_id':    course_id,
+                    'activated_at': activated_at.isoformat(),
+                })
+            except Exception as e:
+                transaction.status = Transaction.Status.FAILED
+                transaction.save()
+                return {'success': False, 'error': f'Enrollment Thinkific échoué: {e}', 'course_id': course_id, 'bundle_id': None}
+
+            enrollment, _ = Enrollment.objects.get_or_create(
                 user=user,
-                course_name=course_data.get('course_name') or course_data.get('name') or f'Cours #{course_id}',
-                transaction_number=transaction.transaction_number,
-                amount=transaction.price,
-                currency=transaction.currency,
-                payment_method=transaction.payment_method or 'mobile',
-                activated_at=activated_at,
-                expiry_date=None,  # accès à vie — pas d'expiry affiché dans l'email
+                thinkific_user_id=thinkific_user_id,
+                course_id=course_id,
+                defaults={'activated_at': activated_at, 'expiry_date': expiry_date},
             )
-        except Exception as e:
-            print(f"[KouLakay] Email confirmation échoué : {e}")
 
-        return {'success': True, 'course_id': course_id, 'enrollment_id': enrollment.id}
+            Payment.objects.get_or_create(user=user, enrollment=enrollment, transaction=transaction)
+            transaction.status       = Transaction.Status.COMPLETED
+            transaction.completed_at = timezone.now()
+            transaction.save()
+
+            try:
+                send_enrollment_confirmation(
+                    user=user,
+                    course_name=course_data.get('course_name') or course_data.get('name') or f'Cours #{course_id}',
+                    transaction_number=transaction.transaction_number,
+                    amount=transaction.price,
+                    currency=transaction.currency,
+                    payment_method=transaction.payment_method or 'mobile',
+                    activated_at=activated_at,
+                    expiry_date=None,
+                )
+            except Exception as e:
+                print(f"[KouLakay] Email confirmation échoué : {e}")
+
+            return {'success': True, 'course_id': course_id, 'bundle_id': None, 'enrollment_id': enrollment.id}
 
     except Exception as e:
         transaction.status = Transaction.Status.FAILED
         transaction.save()
-        return {'success': False, 'error': str(e), 'course_id': None}
+        return {'success': False, 'error': str(e), 'course_id': None, 'bundle_id': None}
 
 
 def create_thinkific_external_order(transaction, thinkific_user_id, product_id):
@@ -391,12 +449,16 @@ def payment_return(request):
     if result.get('paid'):
         proc = process_successful_payment(transaction, {})
         if proc['success']:
+            bundle_data = transaction.meta_data.get('bundle', {})
             course_data = transaction.meta_data.get('course', {})
+            item_name = (bundle_data.get('bundle_name')
+                         or course_data.get('course_name')
+                         or course_data.get('name'))
             request.session['success_context'] = {
-                'course_name': course_data.get('course_name') or course_data.get('name'),
-                'course_id': proc['course_id'],
+                'course_name': item_name,
+                'course_id': proc.get('course_id'),
             }
-            messages.success(request, "Paiement confirmé ! Votre accès au cours est activé. Un email de confirmation vous a été envoyé.")
+            messages.success(request, "Paiement confirmé ! Votre accès est activé. Un email de confirmation vous a été envoyé.")
             return redirect('success_page')
         messages.error(request, f"Erreur lors de l'activation : {proc.get('error', 'Inconnue')}")
         course_id = proc.get('course_id') or transaction.course_id
@@ -524,12 +586,16 @@ def stripe_success(request):
         proc = process_successful_payment(transaction, {})
         request.session.pop('stripe_transaction_number', None)
         if proc['success']:
+            bundle_data = transaction.meta_data.get('bundle', {})
             course_data = transaction.meta_data.get('course', {})
+            item_name = (bundle_data.get('bundle_name')
+                         or course_data.get('course_name')
+                         or course_data.get('name'))
             request.session['success_context'] = {
-                'course_name': course_data.get('course_name') or course_data.get('name'),
-                'course_id': proc['course_id'],
+                'course_name': item_name,
+                'course_id': proc.get('course_id'),
             }
-            messages.success(request, _("Paiement confirmé ! Votre accès au cours est activé."))
+            messages.success(request, _("Paiement confirmé ! Votre accès est activé."))
             return redirect('success_page')
         messages.error(request, _(f"Erreur lors de l'activation : {proc.get('error', 'Inconnue')}"))
         course_id = proc.get('course_id') or transaction.course_id
@@ -578,22 +644,44 @@ def stripe_init_inline(request):
     from pages.models import SiteConfig
     from payment.exchange_service import convert_to_htg, get_htg_rate
 
-    course_id = enrollment_data['course_id']
-    course_price = Decimal(str(enrollment_data['course_price']))
+    is_bundle = enrollment_data.get('is_bundle', False)
     product_id = enrollment_data.get('product_id')
     thinkific_user_id = enrollment_data['thinkific_user_id']
-    course_name = enrollment_data['course_name']
+
+    if is_bundle:
+        item_price = Decimal(str(enrollment_data['bundle_price']))
+        meta_data = {
+            "bundle": {
+                "bundle_id": enrollment_data['bundle_id'],
+                "bundle_name": enrollment_data['bundle_name'],
+                "bundle_course_ids": enrollment_data['bundle_course_ids'],
+                "product_id": product_id,
+            },
+            "user": {"id": request.user.pk, "email": request.user.email, "thinkific_user_id": thinkific_user_id},
+        }
+        stripe_metadata_id = str(enrollment_data['bundle_id'])
+    else:
+        item_price = Decimal(str(enrollment_data['course_price']))
+        meta_data = {
+            "course": {
+                "course_id": enrollment_data['course_id'],
+                "course_name": enrollment_data['course_name'],
+                "product_id": product_id,
+            },
+            "user": {"id": request.user.pk, "email": request.user.email, "thinkific_user_id": thinkific_user_id},
+        }
+        stripe_metadata_id = str(enrollment_data['course_id'])
 
     site_currency = SiteConfig.get().currency
     if site_currency == 'USD':
-        montant_usd = float(course_price)
+        montant_usd = float(item_price)
     else:
-        htg_amount = convert_to_htg(course_price, site_currency)
+        htg_amount = convert_to_htg(item_price, site_currency)
         if htg_amount:
             usd_rate = get_htg_rate('USD')
-            montant_usd = round(htg_amount / usd_rate, 2) if usd_rate else float(course_price)
+            montant_usd = round(htg_amount / usd_rate, 2) if usd_rate else float(item_price)
         else:
-            montant_usd = float(course_price)
+            montant_usd = float(item_price)
 
     tx = Transaction.objects.create(
         user=request.user,
@@ -601,10 +689,7 @@ def stripe_init_inline(request):
         currency=Transaction.Currencies.USD,
         status=Transaction.Status.PENDING,
         payment_method='credit_card',
-        meta_data={
-            "course": {"course_id": course_id, "course_name": course_name, "product_id": product_id},
-            "user": {"id": request.user.pk, "email": request.user.email, "thinkific_user_id": thinkific_user_id},
-        },
+        meta_data=meta_data,
     )
 
     from .stripe_service import StripeService
@@ -612,7 +697,7 @@ def stripe_init_inline(request):
     result = stripe_svc.create_payment_intent(
         amount_usd=montant_usd,
         transaction_number=tx.transaction_number,
-        metadata={'course_id': str(course_id), 'user_email': request.user.email},
+        metadata={'item_id': stripe_metadata_id, 'user_email': request.user.email},
     )
 
     if not result['success']:

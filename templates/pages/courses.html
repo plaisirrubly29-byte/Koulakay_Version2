@@ -172,6 +172,105 @@
         </div>
         {% endwith %}
 
+        <!-- ── Offres Groupées (Bundles) ── -->
+        {% if bundles %}
+        <div class="mb-12" id="bundles-section">
+            <div class="flex items-center gap-3 mb-6" data-aos="fade-up">
+                <span class="w-1 h-7 rounded-full inline-block" style="background:#7C3AED;"></span>
+                <h2 class="text-2xl font-bold text-brand-800">{% trans "Offres Groupées" %}</h2>
+                <span class="px-2 py-0.5 text-xs font-bold rounded-full text-white" style="background:#7C3AED;">
+                    {{ bundles|length }}
+                </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {% for b in bundles %}
+                <div class="bg-white rounded-2xl overflow-hidden shadow-md border-2 border-purple-100"
+                     data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00"
+                     style="transition:transform 0.26s cubic-bezier(.34,1.56,.64,1),box-shadow 0.26s;">
+
+                    <!-- Image -->
+                    <div class="relative h-44" style="background:linear-gradient(135deg,#5B21B6,#7C3AED);">
+                        {% if b.image_url %}
+                        <img src="{{ b.image_url }}" alt="{{ b.name }}" class="w-full h-full object-cover" loading="lazy">
+                        {% endif %}
+                        <!-- Badge Bundle -->
+                        <div class="absolute top-2 left-2">
+                            <span class="px-2 py-1 text-white text-xs font-bold rounded-full shadow flex items-center gap-1"
+                                  style="background:#7C3AED;">
+                                <span class="material-symbols-outlined" style="font-size:13px;">inventory_2</span>
+                                {% trans "Bundle" %}
+                            </span>
+                        </div>
+                        <!-- Nb cours -->
+                        <div class="absolute top-2 right-2">
+                            <span class="px-2 py-0.5 bg-black/50 text-white text-xs font-bold rounded-full">
+                                {{ b.courses|length }} {% trans "cours" %}
+                            </span>
+                        </div>
+                        <!-- Prix -->
+                        <div class="absolute bottom-2 right-2">
+                            {% if b.is_free %}
+                            <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">{% trans "Gratuit" %}</span>
+                            {% else %}
+                            <span class="price-badge px-2 py-1 text-white text-xs font-bold rounded-full">{{ b.price }} {{ site_currency }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        <h3 class="text-sm font-bold text-brand-800 mb-1 line-clamp-2 min-h-[2.75rem]">{{ b.name }}</h3>
+                        <p class="text-xs text-brand-400 mb-3">
+                            <span class="material-symbols-outlined align-middle" style="font-size:14px;">schedule</span>
+                            {{ b.access_duration }}
+                        </p>
+
+                        <div class="flex gap-2">
+                            {% if b.all_enrolled %}
+                            <a href="{% url 'mon_apprentissage' %}"
+                               class="flex-1 text-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
+                                {% trans "Mes cours" %}
+                            </a>
+                            {% else %}
+                            <form method="POST" action="{% url 'bundle_enrollment' b.id %}" class="flex-1">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        class="w-full px-3 py-2 text-sm font-semibold rounded-lg text-white transition"
+                                        style="background:linear-gradient(135deg,#7C3AED,#5B21B6);">
+                                    {% if b.is_free %}{% trans "Accéder" %}{% else %}{% trans "Payer" %}{% endif %}
+                                </button>
+                            </form>
+                            {% endif %}
+                            <button type="button"
+                                    onclick="toggleBundle('bundle-{{ b.id }}')"
+                                    class="px-3 py-2 border rounded-lg text-xs font-semibold transition"
+                                    style="border-color:#7C3AED;color:#7C3AED;"
+                                    title="{% trans 'Voir les cours inclus' %}">
+                                {% trans "Détails" %}
+                            </button>
+                        </div>
+
+                        <!-- Liste des cours (repliable) -->
+                        <div id="bundle-{{ b.id }}" class="hidden mt-3 border-t border-brand-100 pt-3">
+                            <p class="text-xs font-bold text-brand-500 uppercase tracking-wide mb-2">{% trans "Cours inclus" %} :</p>
+                            {% for course in b.courses %}
+                            <div class="flex items-start gap-2 mb-2">
+                                <span class="material-symbols-outlined text-purple-400 shrink-0 mt-0.5" style="font-size:15px;">check_circle</span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-semibold text-brand-700 line-clamp-1">{{ course.name }}</p>
+                                    {% if course.description %}
+                                    <p class="text-xs text-brand-400 line-clamp-1">{{ course.description }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- ── Tous les cours ── -->
         <div>
             <div class="flex items-center gap-3 mb-6" data-aos="fade-up">
@@ -483,6 +582,12 @@
         sortMode = this.value;
         triggerFilter();
     });
+
+    // ── Toggle bundle course list ────────────────────────────────────
+    window.toggleBundle = function (id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden');
+    };
 
     // ── Reset global ─────────────────────────────────────────────────
     window.resetFilters = function () {

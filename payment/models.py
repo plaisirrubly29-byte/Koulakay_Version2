@@ -181,7 +181,10 @@ class Transaction(models.Model):
     
     @property
     def course_name(self):
-        """Retourne le nom du cours depuis les métadonnées"""
+        """Retourne le nom du cours ou du bundle depuis les métadonnées"""
+        bundle = self.meta_data.get('bundle', {})
+        if bundle:
+            return bundle.get('bundle_name', f'Bundle #{bundle.get("bundle_id")}')
         return self.meta_data.get('course', {}).get('course_name', 'N/A')
     
     @property

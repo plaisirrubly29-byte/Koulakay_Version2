@@ -46,6 +46,32 @@ def _format_access_duration(days):
     return f"{days} jours"
 
 
+def _fetch_bundle_details(bundle_id):
+    """GET /bundles/{id} → {id, name, course_ids, bundle_card_image_url, slug}"""
+    url = f"https://api.thinkific.com/api/public/v1/bundles/{bundle_id}"
+    headers = {
+        "Authorization": f"Bearer {settings.THINKIFIC['AUTH_TOKEN']}",
+        "X-Auth-Subdomain": settings.THINKIFIC['SITE_ID'],
+        "Content-Type": "application/json",
+    }
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _fetch_bundle_courses(bundle_id):
+    """GET /bundles/{id}/courses → list of course dicts"""
+    url = f"https://api.thinkific.com/api/public/v1/bundles/{bundle_id}/courses"
+    headers = {
+        "Authorization": f"Bearer {settings.THINKIFIC['AUTH_TOKEN']}",
+        "X-Auth-Subdomain": settings.THINKIFIC['SITE_ID'],
+        "Content-Type": "application/json",
+    }
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
+    return resp.json().get('items', [])
+
+
 def _sync_user_enrollments(user, request=None):
     """
     Lit les enrollments Thinkific de l'utilisateur et crée les entrées manquantes
@@ -230,16 +256,33 @@ def course_enrollment_payment(request, payment_method):
         messages.error(request, _("Session expirée. Veuillez recommencer."))
         return redirect('courses')
 
-    course_id = enrollment_data['course_id']
-    course_name = enrollment_data['course_name']
-    course_price = Decimal(str(enrollment_data['course_price']))
-    product_id = enrollment_data.get('product_id')
-    thinkific_user_id = enrollment_data['thinkific_user_id']
+    is_bundle = enrollment_data.get('is_bundle', False)
+
+    if is_bundle:
+        bundle_id = enrollment_data['bundle_id']
+        bundle_name = enrollment_data['bundle_name']
+        course_price = Decimal(str(enrollment_data['bundle_price']))
+        bundle_course_ids = enrollment_data['bundle_course_ids']
+        product_id = enrollment_data.get('product_id')
+        thinkific_user_id = enrollment_data['thinkific_user_id']
+        course_id = None
+        course_name = bundle_name
+    else:
+        course_id = enrollment_data['course_id']
+        course_name = enrollment_data['course_name']
+        course_price = Decimal(str(enrollment_data['course_price']))
+        product_id = enrollment_data.get('product_id')
+        thinkific_user_id = enrollment_data['thinkific_user_id']
+        bundle_id = None
+        bundle_course_ids = None
+
+    def _err_redirect():
+        return redirect('courses') if is_bundle else redirect('course_details', course_id=course_id)
 
     valid_methods = ['moncash', 'natcash', 'kashpaw', 'credit_card']
     if payment_method not in valid_methods:
         messages.error(request, _("Méthode de paiement invalide."))
-        return redirect('course_details', course_id=course_id)
+        return _err_redirect()
 
     try:
         from payment.models import Transaction
@@ -258,7 +301,7 @@ def course_enrollment_payment(request, payment_method):
                 montant_htg = convert_to_htg(course_price, site_currency)
                 if montant_htg is None:
                     messages.error(request, _("Impossible d'obtenir le taux de change. Réessayez dans quelques instants."))
-                    return redirect('course_details', course_id=course_id)
+                    return _err_redirect()
             tx_currency = Transaction.Currencies.HTG
             tx_price = Decimal(str(montant_htg))
         else:
@@ -280,13 +323,22 @@ def course_enrollment_payment(request, payment_method):
             montant_htg = montant_usd  # sera ignoré (pas PlopPlop)
 
         # Créer la transaction locale (PENDING)
-        transaction = Transaction.objects.create(
-            user=request.user,
-            price=tx_price,
-            currency=tx_currency,
-            status=Transaction.Status.PENDING,
-            payment_method=payment_method,
-            meta_data={
+        if is_bundle:
+            tx_meta = {
+                "bundle": {
+                    "bundle_id": bundle_id,
+                    "bundle_name": bundle_name,
+                    "bundle_course_ids": bundle_course_ids,
+                    "product_id": product_id,
+                },
+                "user": {
+                    "id": request.user.pk,
+                    "email": request.user.email,
+                    "thinkific_user_id": thinkific_user_id,
+                },
+            }
+        else:
+            tx_meta = {
                 "course": {
                     "course_id": course_id,
                     "course_name": course_name,
@@ -298,6 +350,14 @@ def course_enrollment_payment(request, payment_method):
                     "thinkific_user_id": thinkific_user_id,
                 },
             }
+
+        transaction = Transaction.objects.create(
+            user=request.user,
+            price=tx_price,
+            currency=tx_currency,
+            status=Transaction.Status.PENDING,
+            payment_method=payment_method,
+            meta_data=tx_meta,
         )
 
         if payment_method not in haitian_methods:
@@ -315,25 +375,20 @@ def course_enrollment_payment(request, payment_method):
         )
 
         if result['success']:
-            # Sauvegarder l'ID plopplop dans la transaction
             transaction.external_transaction_id = result.get('transaction_id')
             transaction.save()
-
-            # Nettoyer la session
             del request.session['enrollment_data']
-
-            # Rediriger l'utilisateur vers la page de paiement plopplop
             return redirect(result['url'])
         else:
             transaction.status = Transaction.Status.FAILED
             transaction.save()
             messages.error(request, _("Impossible de créer le paiement : ") + result.get('error', ''))
-            return redirect('course_details', course_id=course_id)
+            return _err_redirect()
 
     except Exception as e:
         messages.error(request, _("Erreur lors du traitement du paiement."))
         print(f"Erreur payment plopplop: {e}")
-        return redirect('course_details', course_id=course_id)
+        return _err_redirect()
 
 
 def enroll_user_free(request, course_id, thinkific_user_id, course_name):
@@ -393,6 +448,118 @@ def enroll_user_free(request, course_id, thinkific_user_id, course_name):
         messages.error(request, _("Erreur lors de l'inscription."))
         print(f"Erreur enroll free: {e}")
         return redirect('course_details', course_id=course_id)
+
+
+@login_required
+def bundle_enrollment_step1(request, bundle_id):
+    """Étape 1 d'inscription à un bundle (gratuit → direct, payant → payment_options)"""
+    if request.method != 'POST':
+        return redirect('courses')
+
+    try:
+        product_response = thinkific.products.list(limit=100)
+        product_items = product_response.get('items', [])
+        bundle_product = next(
+            (p for p in product_items
+             if p.get('productable_id') == bundle_id and p.get('productable_type') == 'Bundle'),
+            None
+        )
+        if not bundle_product:
+            messages.error(request, _("Bundle introuvable."))
+            return redirect('courses')
+
+        raw_price = bundle_product.get('price')
+        bundle_price = Decimal(str(raw_price)) if raw_price else Decimal('0')
+        product_id = bundle_product.get('id')
+
+        bundle_info = _fetch_bundle_details(bundle_id)
+        bundle_name = bundle_info.get('name', f'Bundle #{bundle_id}')
+        course_ids = bundle_info.get('course_ids', [])
+
+        thinkific_user_id = request.user.thinkific_user_id
+        if not thinkific_user_id:
+            from accounts.views import get_thinkific_user_by_email
+            thinkific_user = get_thinkific_user_by_email(request.user.email)
+            if thinkific_user:
+                thinkific_user_id = thinkific_user.get('id')
+                request.user.thinkific_user_id = thinkific_user_id
+                request.user.save(update_fields=['thinkific_user_id'])
+
+        if not thinkific_user_id:
+            messages.error(request, _("Impossible de trouver votre profil Thinkific."))
+            return redirect('courses')
+
+        _sync_user_enrollments(request.user, request)
+        enrolled_ids = set(
+            Enrollment.objects.filter(user=request.user).values_list('course_id', flat=True)
+        )
+
+        if course_ids and all(cid in enrolled_ids for cid in course_ids):
+            messages.info(request, _("Vous êtes déjà inscrit à tous les cours de ce bundle."))
+            return redirect('mon_apprentissage')
+
+        if bundle_price == 0:
+            from django.utils import timezone as dj_timezone
+            activated_at = dj_timezone.now()
+            local_expiry = activated_at.replace(year=activated_at.year + 10)
+            for cid in course_ids:
+                if cid in enrolled_ids:
+                    continue
+                try:
+                    thinkific.enrollments.create_enrollment({
+                        "course_id": cid,
+                        "user_id": thinkific_user_id,
+                        "activated_at": activated_at.isoformat(),
+                    })
+                    Enrollment.objects.get_or_create(
+                        user=request.user,
+                        thinkific_user_id=thinkific_user_id,
+                        course_id=cid,
+                        defaults={'activated_at': activated_at, 'expiry_date': local_expiry},
+                    )
+                except Exception as e:
+                    print(f"[bundle_free] Erreur inscription cours {cid}: {e}")
+            messages.success(request, f"Vous êtes inscrit au bundle {bundle_name} !")
+            return redirect('mon_apprentissage')
+
+        # Payant → page de paiement
+        site_currency = SiteConfig.get().currency
+        htg_equivalent = None
+        if site_currency != 'HTG':
+            htg_equivalent = convert_to_htg(bundle_price, site_currency)
+
+        request.session['enrollment_data'] = {
+            'is_bundle': True,
+            'bundle_id': bundle_id,
+            'bundle_name': bundle_name,
+            'bundle_price': float(bundle_price),
+            'bundle_course_ids': course_ids,
+            'product_id': product_id,
+            'thinkific_user_id': thinkific_user_id,
+        }
+
+        bundle_courses = _fetch_bundle_courses(bundle_id)
+        bundle_obj = {
+            'name': bundle_name,
+            'course_card_image_url': bundle_info.get('bundle_card_image_url') or '',
+            'id': bundle_id,
+            'courses': bundle_courses,
+        }
+
+        return render(request, 'pages/payment_options.html', {
+            'course': bundle_obj,
+            'is_bundle': True,
+            'bundle_courses': bundle_courses,
+            'course_price': bundle_price,
+            'site_currency': site_currency,
+            'htg_equivalent': htg_equivalent,
+            'stripe_public_key': settings.STRIPE['PUBLIC_KEY'],
+        })
+
+    except Exception as e:
+        messages.error(request, _("Une erreur est survenue."))
+        print(f"[bundle_enrollment_step1] {e}")
+        return redirect('courses')
 
 
 @login_required
@@ -686,8 +853,39 @@ def courses(request):
 
     apply_course_translations(courses_items)
 
+    # ── Bundles (depuis Thinkific) ──
+    bundles_data = []
+    bundle_products = [p for p in product_items if p.get('productable_type') == 'Bundle']
+    for bp in bundle_products:
+        bundle_id = bp.get('productable_id')
+        if not bundle_id or bundle_id in hidden_ids:
+            continue
+        try:
+            bundle_info = _fetch_bundle_details(bundle_id)
+            bundle_courses = _fetch_bundle_courses(bundle_id)
+            raw_price = bp.get('price')
+            course_ids = bundle_info.get('course_ids', [])
+            all_enrolled = bool(course_ids) and all(cid in enrolled_ids for cid in course_ids)
+            bundles_data.append({
+                'id': bundle_id,
+                'product_id': bp.get('id'),
+                'name': bundle_info.get('name', f'Bundle #{bundle_id}'),
+                'image_url': bundle_info.get('bundle_card_image_url') or '',
+                'slug': bundle_info.get('slug') or '',
+                'price': _format_price(raw_price),
+                'is_free': raw_price is None or float(raw_price) == 0,
+                'raw_price': float(raw_price) if raw_price is not None else 0,
+                'access_duration': _format_access_duration(bp.get('days_until_expiry')),
+                'course_ids': course_ids,
+                'courses': bundle_courses,
+                'all_enrolled': all_enrolled,
+            })
+        except Exception as e:
+            print(f"[bundle] Erreur bundle {bundle_id}: {e}")
+
     context = {
         'courses': courses_items,
+        'bundles': bundles_data,
         'categories': categories,
         'site_currency': SiteConfig.get().currency,
     }
