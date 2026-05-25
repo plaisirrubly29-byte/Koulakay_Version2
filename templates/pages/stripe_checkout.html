@@ -64,9 +64,9 @@
         font-size: 12px; color: #15803D; font-weight: 600;
     }
     /* dark */
-    html.dark body { background: #130A03; }
-    html.dark .stripe-card { background: #18191F; border-color: rgba(148,163,184,0.12); }
-    html.dark .btn-pay { background: linear-gradient(135deg, #3730A3, #4F46E5); }
+    html.dark body { background: #0d0b17; }
+    html.dark .stripe-card { background: #160e2a; border-color: rgba(148,163,184,0.12); }
+    html.dark .btn-pay { background: linear-gradient(135deg, #5b21b6, #7c3aed); }
     html.dark .secure-badge { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.25); color: #4ade80; }
     html.dark #payment-message { color: #f87171; }
 </style>
@@ -178,8 +178,8 @@ async function initStripe() {
             appearance: isDark ? {
                 theme: 'night',
                 variables: {
-                    colorPrimary: '#7C83F5',
-                    colorBackground: '#18191F',
+                    colorPrimary: '#7c3aed',
+                    colorBackground: '#160e2a',
                     colorText: '#EDF0F7',
                     colorDanger: '#f87171',
                     fontFamily: 'system-ui, sans-serif',

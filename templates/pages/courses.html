@@ -18,12 +18,12 @@
     .search-wrap:focus-within { border-color: #C4853A; box-shadow: 0 0 0 3px rgba(196,133,58,0.25); }
     #search-input:focus { outline: none; }
     /* dark */
-    html.dark .search-wrap { background: #18191F !important; border-color: rgba(124,131,245,0.2) !important; }
+    html.dark .search-wrap { background: #160e2a !important; border-color: rgba(124,58,237,0.2) !important; }
     html.dark #search-input { background: transparent !important; color: #EDF0F7 !important; }
     html.dark #search-input::placeholder { color: rgba(155,163,184,0.45) !important; }
     html.dark .sticky { background: rgba(17,18,22,0.97) !important; }
     html.dark .bg-white\/95 { background: rgba(17,18,22,0.97) !important; }
-    html.dark .search-wrap:focus-within { border-color: #7C83F5 !important; box-shadow: 0 0 0 3px rgba(124,131,245,0.18) !important; }
+    html.dark .search-wrap:focus-within { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.18) !important; }
     html.dark .course-card:hover { box-shadow: 0 20px 40px rgba(0,0,0,0.55); }
     .course-link-btn { transition: filter 0.2s; }
     .course-link-btn:hover { filter: brightness(0.85); }
@@ -38,12 +38,12 @@
         animation: skeleton-wave 1.4s ease-in-out infinite;
     }
     html.dark .skeleton-shimmer {
-        background: linear-gradient(90deg, #1F2130 25%, #252748 50%, #1F2130 75%);
+        background: linear-gradient(90deg, #1d1235 25%, #1e1033 50%, #1d1235 75%);
         background-size: 800px 100%;
     }
-    html.dark #skeleton-grid .bg-white { background: #18191F !important; border-color: rgba(148,163,184,0.08) !important; }
+    html.dark #skeleton-grid .bg-white { background: #160e2a !important; border-color: rgba(148,163,184,0.08) !important; }
     /* dark — category pills inactives */
-    html.dark .category-pill.bg-white { background: #18191F !important; border-color: rgba(124,131,245,0.25) !important; color: #A5B4FC !important; }
+    html.dark .category-pill.bg-white { background: #160e2a !important; border-color: rgba(124,58,237,0.25) !important; color: #A5B4FC !important; }
 </style>
 {% endblock %}
 
@@ -460,7 +460,7 @@
             const isActive = btn.dataset.category === slug && slug !== '';
             btn.classList.remove('text-white', 'shadow-sm', 'bg-white', 'border-brand-200', 'text-brand-600');
             if (isActive) {
-                const color = btn.dataset.color || '#6366F1';
+                const color = btn.dataset.color || '#7c3aed';
                 btn.style.background = color;
                 btn.style.borderColor = color;
                 btn.classList.add('text-white', 'shadow-sm');
