@@ -10,7 +10,7 @@ from django.db.models import Count
 import requests
 
 from .monkey_patch.patch_thinkific import ThinkificExtend
-from .models import Enrollment, CourseTranslation, CourseCategory, CourseCategoryMembership, BundleCategoryMembership, CourseVisibility
+from .models import Enrollment, CourseTranslation, CourseCategory, CourseCategoryMembership, BundleCategoryMembership, CourseVisibility, CourseGroup
 from payment.models import Transaction
 from payment.exchange_service import convert_to_htg
 from pages.models import SiteConfig
@@ -934,10 +934,23 @@ def courses(request):
         except Exception as e:
             print(f"[bundle] Erreur bundle {bundle_id}: {e}")
 
+    # ── Groupes de cours ──
+    courses_by_id = {c.get('id'): c for c in courses_items}
+    course_groups = []
+    for group in CourseGroup.objects.filter(is_active=True).prefetch_related('memberships'):
+        member_ids = {m.course_id for m in group.memberships.all()}
+        group_courses = [courses_by_id[cid] for cid in member_ids if cid in courses_by_id]
+        course_groups.append({
+            'group': group,
+            'courses': group_courses,
+            'count': len(group_courses),
+        })
+
     context = {
         'courses': courses_items,
         'bundles': bundles_data,
         'categories': categories,
+        'course_groups': course_groups,
         'site_currency': SiteConfig.get().currency,
     }
 

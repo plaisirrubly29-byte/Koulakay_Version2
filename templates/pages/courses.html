@@ -44,6 +44,16 @@
     html.dark #skeleton-grid .bg-white { background: #160e2a !important; border-color: rgba(124,58,237,0.1) !important; }
     /* dark — category pills inactives */
     html.dark .category-pill.bg-white { background: #160e2a !important; border-color: rgba(124,58,237,0.25) !important; color: #a78bfa !important; }
+    /* dark — group section title */
+    html.dark #groups-section h2 { color: #EDF0F7 !important; }
+    /* group-card — dark mode: cartes déjà sombres, juste ajuster les course-cards dans le modal */
+    html.dark #group-modal-overlay .course-card { background: #160e2a !important; border-color: rgba(124,58,237,0.18) !important; }
+    html.dark #group-modal-overlay .course-card h3 { color: #EDF0F7 !important; }
+    html.dark #group-modal-overlay .course-card p { color: #9bb3c0 !important; }
+    html.dark #group-modal-overlay .course-card .text-brand-700 { color: #a78bfa !important; }
+    html.dark #group-modal-overlay .bg-brand-50 { background: rgba(124,58,237,0.12) !important; }
+    html.dark #group-modal-overlay .border-brand-200 { border-color: rgba(124,58,237,0.2) !important; }
+    html.dark #group-modal-overlay .text-brand-600 { color: #a78bfa !important; }
 </style>
 {% endblock %}
 
@@ -129,6 +139,79 @@
     </div>
 
     <main class="max-w-7xl mx-auto px-4 pb-16 pt-8">
+
+        <!-- ── Groupes de cours ── -->
+        {% if course_groups %}
+        <div id="groups-section" class="mb-14">
+            <div class="flex items-center gap-3 mb-6" data-aos="fade-up">
+                <span class="w-1 h-7 rounded-full inline-block" style="background:#7c3aed;"></span>
+                <h2 class="text-2xl font-bold text-brand-800">{% trans "Collections" %}</h2>
+                <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-mono font-bold"
+                      style="background:rgba(124,58,237,0.12);color:#7c3aed;border:1px solid rgba(124,58,237,0.25);">
+                    {{ course_groups|length }}
+                </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {% for gd in course_groups %}
+                <div class="group-card relative overflow-hidden rounded-2xl cursor-pointer select-none"
+                     style="min-height:200px;"
+                     data-group-card
+                     data-category="{{ gd.group.category.slug|default:'' }}"
+                     data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00"
+                     onclick="openGroupModal({{ gd.group.id }}, '{{ gd.group.name|escapejs }}', '{{ gd.group.description|escapejs }}')">
+
+                    <!-- Fond -->
+                    <div class="absolute inset-0">
+                        {% if gd.group.image %}
+                        <img src="{{ gd.group.image.url }}" alt="{{ gd.group.name }}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0" style="background:linear-gradient(160deg,rgba(13,11,23,0.55) 0%,rgba(13,11,23,0.88) 100%);"></div>
+                        {% else %}
+                        <div class="absolute inset-0" style="background:linear-gradient(135deg,#160e2a 0%,#1d1235 60%,#12082a 100%);">
+                            <div class="absolute inset-0" style="background:radial-gradient(rgba(124,58,237,0.12) 1px,transparent 1px);background-size:22px 22px;"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Bordure violette animée au hover -->
+                    <div class="group-card-border absolute inset-0 rounded-2xl pointer-events-none"
+                         style="border:1.5px solid rgba(124,58,237,0.25);transition:border-color .25s;"></div>
+
+                    <!-- Contenu -->
+                    <div class="relative flex flex-col justify-between p-6 h-full" style="min-height:200px;">
+                        <!-- Haut -->
+                        <div class="flex items-start justify-between">
+                            <!-- Icône tech -->
+                            <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                 style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.35);">
+                                <span class="material-symbols-outlined text-lg" style="color:#a78bfa;">folder_open</span>
+                            </div>
+                            <!-- Compteur -->
+                            <span class="px-2 py-1 rounded-md text-xs font-mono font-bold"
+                                  style="background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd;">
+                                {{ gd.count }} cours
+                            </span>
+                        </div>
+
+                        <!-- Bas -->
+                        <div class="mt-6">
+                            <div class="w-8 h-px mb-3" style="background:#7c3aed;"></div>
+                            <h3 class="text-white font-bold text-lg leading-snug mb-1">{{ gd.group.name }}</h3>
+                            {% if gd.group.description %}
+                            <p class="text-white/55 text-sm line-clamp-2 mb-4">{{ gd.group.description }}</p>
+                            {% else %}
+                            <div class="mb-4"></div>
+                            {% endif %}
+                            <div class="flex items-center gap-1.5 text-sm font-semibold" style="color:#a78bfa;">
+                                <span>{% trans "Voir les cours" %}</span>
+                                <span class="material-symbols-outlined text-base">arrow_forward</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <!-- ── Cours Populaires ── -->
         {% with popular=courses|dictsortreversed:"enrollment_count" %}
@@ -410,6 +493,94 @@
     </main>
 </div>
 
+<!-- ── Modal Groupe ── -->
+{% if course_groups %}
+<div id="group-modal-overlay"
+     class="fixed inset-0 z-50 hidden flex items-start justify-center p-4 pt-10"
+     style="background:rgba(0,0,0,0.82);backdrop-filter:blur(10px);"
+     onclick="if(event.target===this)closeGroupModal()">
+
+    <div class="w-full max-w-6xl rounded-2xl overflow-hidden flex flex-col"
+         style="background:#160e2a;border:1px solid rgba(124,58,237,0.22);max-height:88vh;">
+
+        <!-- Header modal -->
+        <div class="flex items-start justify-between px-7 py-5 shrink-0"
+             style="border-bottom:1px solid rgba(124,58,237,0.15);">
+            <div>
+                <p class="text-xs font-mono uppercase tracking-widest mb-1" style="color:#7c3aed;">Collection</p>
+                <h2 id="group-modal-title" class="text-xl font-bold text-white"></h2>
+                <p id="group-modal-desc" class="text-sm mt-1" style="color:rgba(255,255,255,0.45);"></p>
+            </div>
+            <button onclick="closeGroupModal()"
+                    class="ml-6 shrink-0 text-white/35 hover:text-white transition p-1">
+                <span class="material-symbols-outlined text-2xl">close</span>
+            </button>
+        </div>
+
+        <!-- Grilles de cours par groupe (une seule visible à la fois) -->
+        <div class="overflow-y-auto p-6 grow">
+            {% for gd in course_groups %}
+            <div id="group-courses-{{ gd.group.id }}"
+                 class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                {% for c in gd.courses %}
+                <div class="course-card bg-white rounded-2xl overflow-hidden shadow-sm border border-brand-100">
+                    <div class="relative h-44" style="background:linear-gradient(135deg,#C4853A,#7C3D0E);">
+                        {% if c.course_card_image_url %}
+                        <img src="{{ c.course_card_image_url }}" alt="{{ c.name }}"
+                             class="w-full h-full object-cover" loading="lazy">
+                        {% endif %}
+                        <div class="absolute top-2 left-2">
+                            {% if c.is_free %}
+                            <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full shadow">{% trans "Gratuit" %}</span>
+                            {% else %}
+                            <span class="price-badge px-2 py-1 text-white text-xs font-bold rounded-full">{{ c.price }} {{ site_currency }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-sm font-bold text-brand-800 mb-1 line-clamp-2 min-h-[2.75rem]">{{ c.name }}</h3>
+                        <p class="text-xs text-brand-400 mb-3 line-clamp-2">{{ c.description|default:"Découvrez ce cours" }}</p>
+                        <div class="mb-3">
+                            {% if c.is_free %}
+                            <span class="text-green-600 font-bold text-sm">{% trans "Gratuit" %}</span>
+                            {% else %}
+                            <span class="font-bold text-brand-700 text-sm">{{ c.price }} {{ site_currency }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex gap-2">
+                            {% if c.enroll %}
+                            <a href="{% url 'thinkific_sso' %}?return_to=/courses/take/{{ c.slug }}"
+                               class="flex-1 text-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition">
+                                {% trans "Continuer" %}
+                            </a>
+                            {% else %}
+                            <button type="button"
+                                    onclick="closeGroupModal();openCourseModal('{% url 'course_enrollment' c.id %}','{% url 'course_details' c.id %}','{{ c.name|escapejs }}','{{ c.description|default:''|escapejs }}','{{ c.price|default:0 }}','{{ c.course_card_image_url|default:'' }}','{{ c.access_duration|default:'' }}')"
+                                    class="flex-1 kl-btn-cta px-3 py-2 text-sm font-semibold rounded-lg">
+                                {% trans "S'inscrire" %}
+                            </button>
+                            {% endif %}
+                            <a href="{% url 'course_details' c.id %}"
+                               class="px-3 py-2 bg-brand-50 border border-brand-200 text-brand-600 rounded-lg hover:bg-brand-100 transition"
+                               title="{% trans 'Détails' %}">
+                                <span class="material-symbols-outlined" style="font-size:18px;line-height:1.4;">visibility</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full text-center py-12">
+                    <span class="material-symbols-outlined text-5xl block mb-3" style="color:rgba(124,58,237,0.35);">school</span>
+                    <p style="color:rgba(255,255,255,0.4);">{% trans "Aucun cours dans ce groupe." %}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- ── Modal Inscription ── -->
 {% include 'components/course_modal.html' %}
 
@@ -430,6 +601,8 @@
     const sortSelect   = document.getElementById('sort-select');
     const resultLabel  = document.getElementById('result-label');
     const popularSec   = document.getElementById('popular-section');
+    const groupsSec    = document.getElementById('groups-section');
+    const groupCards   = Array.from(document.querySelectorAll('[data-group-card]'));
     const sectionTitle = document.getElementById('section-title');
     const pills        = Array.from(document.querySelectorAll('.filter-pill'));
     const catPills     = Array.from(document.querySelectorAll('.category-pill'));
@@ -479,6 +652,20 @@
     function applyFilters() {
         const isFiltering = query !== '' || activeFilter !== 'all' || activeCategory !== '';
         if (popularSec) popularSec.classList.toggle('hidden', isFiltering);
+
+        // Groupes : visibles uniquement si pas de recherche/filtre libre/payant
+        // Quand une catégorie est active → on montre uniquement les groupes de cette catégorie
+        if (groupsSec && groupCards.length) {
+            const hideGroups = query !== '' || activeFilter !== 'all';
+            let visibleGroups = 0;
+            groupCards.forEach(card => {
+                const catMatch = !activeCategory || card.dataset.category === activeCategory;
+                const show = !hideGroups && catMatch;
+                card.classList.toggle('hidden', !show);
+                if (show) visibleGroups++;
+            });
+            groupsSec.classList.toggle('hidden', hideGroups || visibleGroups === 0);
+        }
         if (sectionTitle) {
             sectionTitle.textContent = isFiltering
                 ? 'ExamHaiti'
@@ -651,6 +838,45 @@
     // sans attendre le scroll (AOS offset peut les bloquer sinon).
     if (typeof AOS !== 'undefined') AOS.refresh();
 })();
+
+// ── Groupes de cours — modal ───────────────────────────────────────────────
+function openGroupModal(groupId, name, desc) {
+    document.querySelectorAll('[id^="group-courses-"]').forEach(el => {
+        el.classList.add('hidden');
+    });
+    const grid = document.getElementById('group-courses-' + groupId);
+    if (grid) grid.classList.remove('hidden');
+    document.getElementById('group-modal-title').textContent = name;
+    const descEl = document.getElementById('group-modal-desc');
+    if (descEl) { descEl.textContent = desc; descEl.style.display = desc ? '' : 'none'; }
+    const overlay = document.getElementById('group-modal-overlay');
+    if (overlay) { overlay.classList.remove('hidden'); document.body.style.overflow = 'hidden'; }
+}
+
+function closeGroupModal() {
+    const overlay = document.getElementById('group-modal-overlay');
+    if (overlay) { overlay.classList.add('hidden'); document.body.style.overflow = ''; }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeGroupModal();
+});
+
+// Hover glow sur les cartes groupe
+document.querySelectorAll('.group-card').forEach(function(card) {
+    const border = card.querySelector('.group-card-border');
+    card.addEventListener('mouseenter', function() {
+        if (border) border.style.borderColor = 'rgba(124,58,237,0.65)';
+        card.style.transform = 'translateY(-5px)';
+        card.style.boxShadow = '0 16px 40px rgba(124,58,237,0.22)';
+    });
+    card.addEventListener('mouseleave', function() {
+        if (border) border.style.borderColor = 'rgba(124,58,237,0.25)';
+        card.style.transform = '';
+        card.style.boxShadow = '';
+    });
+    card.style.transition = 'transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s';
+});
 </script>
 
 {% endblock content %}

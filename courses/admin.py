@@ -145,6 +145,59 @@ class CourseCategoryAdmin(admin.ModelAdmin):
             )
 
 
+class CourseGroupAdminForm(forms.ModelForm):
+    selected_courses = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label='Cours inclus dans ce groupe',
+        help_text='Cochez les cours Thinkific à associer à ce groupe.',
+    )
+
+    class Meta:
+        model = models.CourseGroup
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        courses = _fetch_thinkific_courses()
+        self.fields['selected_courses'].choices = [
+            (str(cid), name) for cid, name in courses
+        ]
+        if self.instance and self.instance.pk:
+            self.fields['selected_courses'].initial = [
+                str(m.course_id) for m in self.instance.memberships.all()
+            ]
+
+
+@admin.register(models.CourseGroup)
+class CourseGroupAdmin(admin.ModelAdmin):
+    form = CourseGroupAdminForm
+    list_display = ('name', 'order', 'is_active', 'course_count')
+    list_display_links = ('name',)
+    list_editable = ('order', 'is_active')
+    fields = ('name', 'description', 'image', 'category', 'order', 'is_active', 'selected_courses')
+
+    class Media:
+        css = {'all': ('admin/css/category_courses.css',)}
+
+    def course_count(self, obj):
+        return obj.memberships.count()
+    course_count.short_description = 'Nb cours'
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        selected_ids = [int(x) for x in form.cleaned_data.get('selected_courses', [])]
+        courses = _fetch_thinkific_courses()
+        course_map = {cid: name for cid, name in courses}
+        obj.memberships.exclude(course_id__in=selected_ids).delete()
+        for cid in selected_ids:
+            models.CourseGroupMembership.objects.update_or_create(
+                group=obj,
+                course_id=cid,
+                defaults={'course_name_cache': course_map.get(cid, '')},
+            )
+
+
 @admin.register(models.CourseVisibility)
 class CourseVisibilityAdmin(admin.ModelAdmin):
     change_list_template = 'admin/courses/coursevisibility/change_list.html'

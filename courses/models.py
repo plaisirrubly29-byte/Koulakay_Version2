@@ -100,6 +100,50 @@ class CourseCategoryMembership(models.Model):
         return self.course_name_cache or str(self.course_id)
 
 
+class CourseGroup(models.Model):
+    """Regroupement éditorial de cours — affiché sous forme de cartes sur la page catalogue."""
+    name = models.CharField('Nom', max_length=200)
+    description = models.TextField('Description', blank=True)
+    image = models.ImageField(
+        'Image', upload_to='course_groups/', blank=True, null=True,
+        help_text='Optionnel — fond de la carte (recommandé : 800×400 px)'
+    )
+    category = models.ForeignKey(
+        'CourseCategory', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='course_groups',
+        verbose_name='Catégorie parente',
+        help_text='Catégorie à laquelle appartient ce groupe — filtre automatique sur la page cours'
+    )
+    order = models.PositiveSmallIntegerField('Ordre', default=0)
+    is_active = models.BooleanField('Actif', default=True)
+
+    class Meta:
+        verbose_name = 'Groupe de cours'
+        verbose_name_plural = 'Groupes de cours'
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class CourseGroupMembership(models.Model):
+    group = models.ForeignKey(
+        CourseGroup, on_delete=models.CASCADE,
+        related_name='memberships', verbose_name='Groupe'
+    )
+    course_id = models.IntegerField('ID cours Thinkific')
+    course_name_cache = models.CharField('Nom (cache)', max_length=255, blank=True)
+
+    class Meta:
+        verbose_name = 'Cours du groupe'
+        verbose_name_plural = 'Cours du groupe'
+        unique_together = ('group', 'course_id')
+
+    def __str__(self):
+        return self.course_name_cache or str(self.course_id)
+
+
 class BundleCategoryMembership(models.Model):
     category = models.ForeignKey(
         CourseCategory, on_delete=models.CASCADE,
