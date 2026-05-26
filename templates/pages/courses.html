@@ -155,6 +155,8 @@
                 {% for gd in course_groups %}
                 <div class="group-card relative overflow-hidden rounded-2xl cursor-pointer select-none"
                      style="min-height:200px;"
+                     data-group-card
+                     data-category="{{ gd.group.category.slug|default:'' }}"
                      data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00"
                      onclick="openGroupModal({{ gd.group.id }}, '{{ gd.group.name|escapejs }}', '{{ gd.group.description|escapejs }}')">
 
@@ -599,6 +601,8 @@
     const sortSelect   = document.getElementById('sort-select');
     const resultLabel  = document.getElementById('result-label');
     const popularSec   = document.getElementById('popular-section');
+    const groupsSec    = document.getElementById('groups-section');
+    const groupCards   = Array.from(document.querySelectorAll('[data-group-card]'));
     const sectionTitle = document.getElementById('section-title');
     const pills        = Array.from(document.querySelectorAll('.filter-pill'));
     const catPills     = Array.from(document.querySelectorAll('.category-pill'));
@@ -648,6 +652,20 @@
     function applyFilters() {
         const isFiltering = query !== '' || activeFilter !== 'all' || activeCategory !== '';
         if (popularSec) popularSec.classList.toggle('hidden', isFiltering);
+
+        // Groupes : visibles uniquement si pas de recherche/filtre libre/payant
+        // Quand une catégorie est active → on montre uniquement les groupes de cette catégorie
+        if (groupsSec && groupCards.length) {
+            const hideGroups = query !== '' || activeFilter !== 'all';
+            let visibleGroups = 0;
+            groupCards.forEach(card => {
+                const catMatch = !activeCategory || card.dataset.category === activeCategory;
+                const show = !hideGroups && catMatch;
+                card.classList.toggle('hidden', !show);
+                if (show) visibleGroups++;
+            });
+            groupsSec.classList.toggle('hidden', hideGroups || visibleGroups === 0);
+        }
         if (sectionTitle) {
             sectionTitle.textContent = isFiltering
                 ? 'ExamHaiti'

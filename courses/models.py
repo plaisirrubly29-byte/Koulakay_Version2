@@ -108,6 +108,13 @@ class CourseGroup(models.Model):
         'Image', upload_to='course_groups/', blank=True, null=True,
         help_text='Optionnel — fond de la carte (recommandé : 800×400 px)'
     )
+    category = models.ForeignKey(
+        'CourseCategory', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='course_groups',
+        verbose_name='Catégorie parente',
+        help_text='Catégorie à laquelle appartient ce groupe — filtre automatique sur la page cours'
+    )
     order = models.PositiveSmallIntegerField('Ordre', default=0)
     is_active = models.BooleanField('Actif', default=True)
 

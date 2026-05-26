@@ -175,7 +175,7 @@ class CourseGroupAdmin(admin.ModelAdmin):
     list_display = ('name', 'order', 'is_active', 'course_count')
     list_display_links = ('name',)
     list_editable = ('order', 'is_active')
-    fields = ('name', 'description', 'image', 'order', 'is_active', 'selected_courses')
+    fields = ('name', 'description', 'image', 'category', 'order', 'is_active', 'selected_courses')
 
     class Media:
         css = {'all': ('admin/css/category_courses.css',)}
