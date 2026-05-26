@@ -46,7 +46,7 @@ if PRODUCTION:
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY","dev")
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'koulakay.ht', 'www.koulakay.ht']
 
 # Railway injecte RAILWAY_PUBLIC_DOMAIN (ex: koulakay-production.up.railway.app)
 _railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
@@ -69,7 +69,7 @@ if PRODUCTION:
     if _extra_cors:
         CORS_ALLOWED_ORIGINS += [o.strip() for o in _extra_cors.split(',') if o.strip()]
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost', 'http://127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['http://localhost', 'http://127.0.0.1', 'https://koulakay.ht', 'https://www.koulakay.ht']
 if _railway_domain:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_domain}')
 _extra_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
